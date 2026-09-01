@@ -1,0 +1,1814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Varenium | Pro 2.0</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+
+    <style>
+        /* --- THEME VARIABLES --- */
+        :root {
+            --primary: #C2410C; 
+            --primary-rgb: 194, 65, 12;
+            --primary-hover: #9A3412;
+            --bg-body: #F3F4F6;
+            --bg-card: #FFFFFF;
+            --bg-nav: #FFFFFF;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --border: #E5E7EB;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --radius: 12px;
+            --chart-grid: #E5E7EB;
+            --chart-text: #6B7280;
+        }
+
+        body.theme-blue { --primary: #2563EB; --primary-rgb: 37, 99, 235; --primary-hover: #1D4ED8; }
+        body.theme-teal { --primary: #0D9488; --primary-rgb: 13, 148, 136; --primary-hover: #0F766E; }
+
+        body.dark-mode {
+            --bg-body: #0F172A;
+            --bg-card: #1E293B;
+            --bg-nav: #1E293B;
+            --text-main: #F8FAFC;
+            --text-muted: #94A3B8;
+            --border: #334155;
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            --chart-grid: rgba(255, 255, 255, 0.1);
+            --chart-text: #CBD5E1;
+        }
+        body.dark-mode { --primary: #FB923C; }
+        body.dark-mode.theme-blue { --primary: #60A5FA; }
+        body.dark-mode.theme-teal { --primary: #2DD4BF; }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-body); color: var(--text-main); height: 100vh; overflow: hidden; transition: background 0.3s, color 0.3s; }
+        button { cursor: pointer; font-family: inherit; }
+        .hidden { display: none !important; }
+
+        /* --- LANDING PAGE --- */
+        #landing-page { position: fixed; inset: 0; z-index: 2000; background: linear-gradient(135deg, #111827 0%, #000000 100%); display: flex; align-items: center; justify-content: center; overflow-y: auto; padding: 2rem; }
+        .landing-content { text-align: center; color: white; width: 100%; max-width: 480px; }
+        .hero-title { font-family: 'Playfair Display', serif; font-size: 3.5rem; margin-bottom: 0.5rem; color: #FB923C; }
+        .hero-sub { color: #9CA3AF; margin-bottom: 2.5rem; font-size: 1.1rem; line-height: 1.6; }
+        
+        .auth-box { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); padding: 2rem; border-radius: 16px; }
+        .auth-tabs { display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 1.5rem; }
+        .auth-tab { flex: 1; background: none; border: none; padding: 1rem; color: #6B7280; font-weight: 600; transition: 0.3s; }
+        .auth-tab.active { color: #FB923C; border-bottom: 2px solid #FB923C; }
+        
+        .input-dark { width: 100%; padding: 0.8rem; background: #1F2937; border: 1px solid #374151; color: white; border-radius: 8px; margin-bottom: 1rem; }
+        .input-dark:focus { outline: none; border-color: #FB923C; }
+        .btn-landing { width: 100%; padding: 0.8rem; background: #C2410C; color: white; font-weight: 700; border: none; border-radius: 8px; transition: 0.2s; }
+        .btn-landing:hover { background: #EA580C; }
+        .link-forgot { color: #9CA3AF; font-size: 0.8rem; margin-top: 10px; cursor: pointer; text-decoration: underline; }
+        .link-forgot:hover { color: white; }
+
+        /* --- APP LAYOUT --- */
+        #app-interface { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        .toolbar { background: var(--bg-nav); border-bottom: 1px solid var(--border); padding: 0 2rem; height: 70px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; z-index: 100; transition: background 0.3s; }
+        .logo { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+        .nav-tabs { display: flex; gap: 0.5rem; background: var(--bg-body); padding: 4px; border-radius: 8px; }
+        .nav-btn { background: none; border: none; padding: 0.5rem 1.2rem; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); border-radius: 6px; transition: 0.2s; }
+        .nav-btn:hover { color: var(--text-main); }
+        .nav-btn.active { background: var(--bg-card); color: var(--primary); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .user-profile { display: flex; align-items: center; gap: 1rem; }
+        .avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); }
+        .btn-icon { background: none; border: none; font-size: 1.2rem; color: var(--text-muted); padding: 5px; }
+        .btn-icon:hover { color: var(--primary); }
+
+        .main-content { flex: 1; overflow-y: auto; padding: 2rem; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .dashboard-grid { display: grid; grid-template-columns: 320px 1fr; gap: 1.5rem; align-items: stretch; }
+        .grid-col-left { display: flex; flex-direction: column; gap: 1.5rem; }
+        @media (max-width: 1024px) { .dashboard-grid { grid-template-columns: 1fr; } }
+
+        .card { background: var(--bg-card); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); transition: background 0.3s; }
+        .card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; }
+        .card-expand { flex-grow: 1; display: flex; flex-direction: column; }
+
+        /* --- DATE PICKER TRIGGER --- */
+        .date-picker-trigger {
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; font-weight: 700; letter-spacing: 0.5px;
+        }
+        .date-picker-trigger i { color: var(--primary); font-size: 1.1rem; }
+
+        /* --- LOG ENTRY DROPDOWN --- */
+        .log-entry-card { position: relative; }
+        .log-entry-toggle {
+            width: 100%; display: flex; align-items: center; justify-content: space-between;
+            background: none; border: none; padding: 0; font-size: 1rem; font-weight: 700;
+            color: var(--text-main); cursor: pointer;
+        }
+        .log-entry-chevron { color: var(--primary); font-size: 1.1rem; transition: transform 0.25s; }
+        .log-entry-toggle.open .log-entry-chevron { transform: rotate(180deg); }
+        .log-entry-hint { font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; }
+        .log-entry-dropdown {
+            position: absolute; top: calc(100% + 8px); left: 0; right: 0;
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+            box-shadow: var(--shadow); padding: 1.25rem; z-index: 200;
+            display: none;
+        }
+        .log-entry-dropdown.open { display: block; }
+
+        /* --- ROTATING WHEEL DATE MODAL --- */
+        #date-picker-modal, #admin-view-modal, #month-grid-modal {
+            position: fixed; inset: 0; z-index: 3000;
+            background: rgba(0,0,0,0.55);
+            display: flex; align-items: center; justify-content: center; padding: 1rem;
+        }
+        #month-grid-modal { z-index: 3200; }
+        .wheel-picker-card {
+            background: var(--bg-card); border-radius: 20px; padding: 1.6rem 1.25rem 1.4rem;
+            width: 300px; max-width: 92vw; box-shadow: var(--shadow); text-align: center;
+            border: 1px solid var(--border);
+        }
+        .wheel-picker-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--text-main); margin-bottom: 0.2rem; }
+        .wheel-picker-sub { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 1px; }
+
+        .wheel-today-btn {
+            display: inline-flex; align-items: center; gap: 6px; margin: 0 auto 0.75rem;
+            background: none; border: 1px solid var(--border); color: var(--text-muted);
+            font-size: 0.75rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; transition: 0.2s;
+        }
+        .wheel-today-btn:hover { color: var(--primary); border-color: var(--primary); }
+        .wheel-actions { display: flex; gap: 10px; margin-top: 1.25rem; }
+
+        /* --- MONTH GRID PICKER (12 fixed boxes, no keyboard) --- */
+        .grid-popup-card {
+            background: var(--bg-card); border-radius: 16px; padding: 1.25rem;
+            width: 280px; max-width: 90vw; box-shadow: var(--shadow);
+            border: 1px solid var(--border); text-align: center;
+        }
+        .grid-popup-title { font-weight: 700; color: var(--text-main); margin-bottom: 0.85rem; font-size: 0.95rem; }
+        .grid-popup-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .grid-popup-cell {
+            padding: 0.7rem 0; border-radius: 8px; border: 1px solid var(--border);
+            background: var(--bg-body); color: var(--text-main); font-weight: 700;
+            font-size: 0.85rem; cursor: pointer; transition: 0.15s;
+        }
+        .grid-popup-cell:hover { border-color: var(--primary); color: var(--primary); }
+        .grid-popup-cell.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+        /* --- DATE COLUMNS (static value, tap to type — no drag/scroll) --- */
+        .wheel-row { position: relative; display: flex; justify-content: center; align-items: center; height: 140px; }
+        .wheel-col {
+            position: relative; width: 33.33%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            user-select: none;
+        }
+        .wheel-item {
+            width: 100%; text-align: center; cursor: pointer;
+            font-weight: 800; font-size: 1.85rem; color: var(--text-main);
+        }
+        .wheel-manual-input {
+            width: 100%;
+            text-align: center; border: none; outline: none; background: transparent;
+            font-weight: 800; font-size: 1.85rem; color: var(--primary); font-family: inherit;
+        }
+        /* --- INPUTS --- */
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.4rem; text-transform: uppercase; }
+        .input-std { width: 100%; padding: 0.7rem; background: var(--bg-body); border: 1px solid var(--border); color: var(--text-main); border-radius: 8px; font-family: inherit; }
+        .input-std:focus { outline: none; border-color: var(--primary); }
+        .btn-primary { width: 100%; padding: 0.8rem; background: var(--primary); color: white; font-weight: 700; border: none; border-radius: 8px; transition: 0.2s; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-outline { width: 100%; padding: 0.8rem; background: transparent; color: var(--primary); font-weight: 700; border: 1px solid var(--primary); border-radius: 8px; transition: 0.2s; }
+        .btn-outline:hover { background: rgba(var(--primary-rgb), 0.1); }
+        .btn-danger { width: 100%; padding: 0.5rem; background: #EF4444; color: white; font-weight: 700; border: none; border-radius: 8px; transition: 0.2s; font-size: 0.8rem; }
+        .err-msg { color: #EF4444; font-size: 0.75rem; margin-top: 4px; font-weight: 600; display: none; }
+        
+        .chart-wrapper { position: relative; height: 250px; width: 100%; }
+        .chart-wrapper-lg { position: relative; height: 320px; width: 100%; }
+        .chart-center-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; font-weight: 800; color: var(--text-main); font-size: 1.2rem; }
+
+        .list-container { max-height: 300px; overflow-y: auto; }
+        .list-fill { flex: 1; overflow-y: auto; max-height: none; } 
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 0; border-bottom: 1px solid var(--border); }
+        .score-badge { background: rgba(var(--primary-rgb), 0.1); color: var(--primary); font-weight: 800; padding: 2px 8px; border-radius: 12px; font-size: 0.9rem; }
+        .rank-circle { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; margin-right: 10px; }
+        .gold { background: #FFD700; color: #854D0E; }
+        .silver { background: #E5E7EB; color: #374151; }
+        .bronze { background: #FB923C; color: #7C2D12; }
+        .rank-blue { background: #EFF6FF; color: #1E3A8A; }
+        .lb-score-val { color: var(--primary); font-weight: 800; }
+
+        .admin-table { width: 100%; border-collapse: collapse; }
+        .admin-table th { text-align: left; padding: 1rem; border-bottom: 2px solid var(--border); color: var(--text-muted); }
+        .admin-table td { padding: 1rem; border-bottom: 1px solid var(--border); }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+        .badge-root { background: #7C3AED; color: white; }
+        .badge-admin { background: #2563EB; color: white; }
+        .badge-user { background: #9CA3AF; color: white; }
+
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1rem; }
+        .stat-box { background: var(--bg-card); padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); text-align: center; }
+        .stat-num { font-size: 1.5rem; font-weight: 800; color: var(--text-main); }
+        .stat-lbl { font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-top: 5px;}
+        .year-table { width: 100%; margin-top: 1rem; }
+        .year-row { display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 1px solid var(--border); }
+        .year-val { font-weight: 700; color: var(--primary); }
+        
+        .color-opt { width: 30px; height: 30px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+        .color-opt.active { border-color: var(--text-main); transform: scale(1.1); }
+        .toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+        .toggle-switch { position: relative; width: 40px; height: 20px; background: #D1D5DB; border-radius: 20px; cursor: pointer; transition: 0.3s; }
+        .toggle-switch::after { content:''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: 0.3s; }
+        .toggle-switch.active { background: var(--primary); }
+        .toggle-switch.active::after { left: 22px; }
+
+    </style>
+</head>
+<body class=""> 
+    <div id="landing-page">
+        <div class="landing-content">
+            <h1 class="hero-title">Varenium</h1>
+            <p class="hero-sub">Daily spiritual tracking for serious practitioners.<br>Analyze. Improve. Transcend.</p>
+            
+            <div class="auth-box">
+                <div class="auth-tabs" id="auth-nav">
+                    <button class="auth-tab active" id="tab-login" onclick="toggleAuth('login')">Login</button>
+                    <button class="auth-tab" id="tab-reg" onclick="toggleAuth('reg')">Register</button>
+                </div>
+                
+                <div id="form-login">
+                    <input type="text" id="l-user" class="input-dark" placeholder="Username" onkeyup="if(event.key==='Enter') authLogin()">
+                    <input type="password" id="l-pass" class="input-dark" placeholder="Password" onkeyup="if(event.key==='Enter') authLogin()">
+                    <button onclick="authLogin()" class="btn-landing">Enter</button>
+                    <div id="login-err" class="err-msg" style="text-align: center;"></div>
+                    <div class="link-forgot" onclick="toggleAuth('forgot')">Forgot Password?</div>
+                </div>
+
+                <div id="form-reg" class="hidden">
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="r-first" class="input-dark" placeholder="First Name" style="margin-bottom:0;">
+                        <input type="text" id="r-last" class="input-dark" placeholder="Last Name" style="margin-bottom:0;">
+                    </div>
+                    <div style="height:1rem;"></div>
+                    <input type="email" id="r-email" class="input-dark" placeholder="Email (Unique)">
+                    <input type="text" id="r-user" class="input-dark" placeholder="Choose Username (Unique)">
+                    <input type="password" id="r-pass" class="input-dark" placeholder="Password">
+                    <button onclick="authRegister()" class="btn-landing">Create Account</button>
+                    <div id="reg-err" class="err-msg" style="text-align: center;"></div>
+                    <p style="color:#6B7280; font-size:0.7rem; text-align:center; margin-top:0.75rem;">Real first &amp; last name required — usernames are just a unique handle, like on Instagram.</p>
+                </div>
+
+                <div id="form-forgot" class="hidden">
+                    <h3 style="color:white; margin-bottom:1rem; font-size:1.1rem;">Reset Password</h3>
+                    <div id="forgot-step-1">
+                        <input type="email" id="f-email" class="input-dark" placeholder="Enter Account Email">
+                        <button onclick="sendResetCode()" class="btn-landing">Send 6-Digit Code</button>
+                    </div>
+                    <div id="forgot-step-2" class="hidden">
+                        <input type="number" id="f-code" class="input-dark" placeholder="6-Digit Code">
+                        <input type="password" id="f-newpass" class="input-dark" placeholder="New Password">
+                        <button onclick="confirmResetPass()" class="btn-landing">Reset Password</button>
+                    </div>
+                    <div class="link-forgot" onclick="toggleAuth('login')">Back to Login</div>
+                    <div id="forgot-err" class="err-msg" style="text-align: center;"></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div id="app-interface" class="hidden">
+        
+        <header class="toolbar">
+            <div class="logo">Varenium</div>
+            
+            <nav class="nav-tabs">
+                <button class="nav-btn active" onclick="switchView('overview', this)">Overview</button>
+                <button class="nav-btn" onclick="switchView('stats', this)">Statistics & AI</button>
+                <button class="nav-btn" onclick="switchView('journals', this)">Journals</button>
+                <button class="nav-btn" onclick="switchView('settings', this)">Settings</button>
+                <button class="nav-btn hidden" id="nav-admin" onclick="switchView('admin', this)">Admin</button>
+            </nav>
+
+            <div class="user-profile">
+                <img src="" id="user-avatar-img" class="avatar">
+                <button onclick="logout()" class="btn-icon"><i class="ri-logout-box-r-line"></i></button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="container">
+
+                <div id="view-overview">
+                    <div class="dashboard-grid">
+                        
+                        <div class="grid-col-left">
+                            <div class="card log-entry-card">
+                                <button type="button" class="log-entry-toggle" id="log-entry-toggle" onclick="toggleLogEntryForm()">
+                                    <span>📝 Log Entry</span>
+                                    <span class="log-entry-chevron" aria-hidden="true">▾</span>
+                                </button>
+                                <div class="log-entry-hint">Tap to fill in today's chanting, reading & service</div>
+
+                                <div class="log-entry-dropdown" id="log-entry-dropdown">
+                                    <form onsubmit="submitEntry(event)">
+
+                                        <label>Date Entry</label>
+                                        <button type="button" id="date-picker-btn" class="input-std date-picker-trigger" onclick="openDatePicker()" style="margin-bottom: 1rem;">
+                                            <span id="date-picker-display">--</span>
+                                            <span aria-hidden="true">📅</span>
+                                        </button>
+
+                                        <div class="form-group">
+                                            <label>Chanting (Rounds / 16)</label>
+                                            <input type="number" id="e-rounds" class="input-std" placeholder="Target: 16" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Reading (Mins / 60)</label>
+                                            <input type="number" id="e-read" class="input-std" placeholder="Target: 60">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Lecture (Mins / 60)</label>
+                                            <input type="number" id="e-lec" class="input-std" placeholder="Target: 60">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Service (Mins / 60)</label>
+                                            <input type="number" id="e-seva" class="input-std" placeholder="Target: 60">
+                                        </div>
+                                        <button type="submit" class="btn-primary">Enter</button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="card card-expand">
+                                <h2>Recent Entries <button onclick="clearLogs()" style="color:#EF4444; background:none; border:none; font-size:0.75rem;">Clear</button></h2>
+                                <div id="log-list" class="list-fill"></div>
+                            </div>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-content: start;">
+                            
+                            <div class="card">
+                                <h2>Weekly Goal</h2>
+                                <div class="chart-wrapper">
+                                    <canvas id="chart-weekly"></canvas>
+                                    <div class="chart-center-text" id="txt-weekly">0/700</div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <h2>Balance</h2>
+                                <div class="chart-wrapper">
+                                    <canvas id="chart-radar"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <h2>Leaderboard (Week)</h2>
+                                <div id="leaderboard-list" class="list-container" style="height: 250px;"></div>
+                            </div>
+
+                            <div class="card">
+                                <h2>Comparison</h2>
+                                <div class="chart-wrapper">
+                                    <canvas id="chart-bar"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="card" style="grid-column: span 2;">
+                                <h2>Consistency Trend</h2>
+                                <div class="chart-wrapper-lg">
+                                    <canvas id="chart-trend"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div id="view-stats" class="hidden">
+                    <div class="card" style="background: linear-gradient(135deg, rgba(var(--primary-rgb),0.1), rgba(124,58,237,0.1)); border:1px solid var(--primary); margin-bottom: 1.5rem;">
+                        <h2 style="color:var(--primary);">🤖 Advanced AI Coach</h2>
+                        <p id="ai-text" style="font-size:1.05rem; line-height:1.6; font-weight:500;">
+                            Generate logs to see insights...
+                        </p>
+                    </div>
+
+                    <h3 style="margin-bottom:10px; color:var(--text-muted); font-size:0.9rem;">DESCRIPTIVE STATISTICS</h3>
+                    <div class="stats-row">
+                        <div class="stat-box"><div class="stat-num" id="s-mean">0</div><div class="stat-lbl">Mean (μ)</div></div>
+                        <div class="stat-box"><div class="stat-num" id="s-median">0</div><div class="stat-lbl">Median</div></div>
+                        <div class="stat-box"><div class="stat-num" id="s-mode">0</div><div class="stat-lbl">Mode</div></div>
+                        <div class="stat-box"><div class="stat-num" id="s-dev">0</div><div class="stat-lbl">Std. Dev (σ)</div></div>
+                    </div>
+                    
+                    <h3 style="margin-bottom:10px; color:var(--text-muted); font-size:0.9rem;">DISTRIBUTION METRICS</h3>
+                    <div class="stats-row">
+                        <div class="stat-box"><div class="stat-num" id="s-var">0</div><div class="stat-lbl">Variance (σ²)</div></div>
+                        <div class="stat-box"><div class="stat-num" id="s-cv">0%</div><div class="stat-lbl">Coeff. of Variation</div></div>
+                        <div class="stat-box"><div class="stat-num" id="s-skew">0</div><div class="stat-lbl">Skewness</div></div>
+                        <div class="stat-box"><div class="stat-num" id="s-kurt">0</div><div class="stat-lbl">Kurtosis</div></div>
+                    </div>
+
+                    <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
+                        <div class="card">
+                            <h2>Score Distribution</h2>
+                            <div class="chart-wrapper-lg">
+                                <canvas id="chart-hist"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h2>Yearly Progress</h2>
+                            <div id="yearly-list" class="list-container" style="height: 320px;">
+                                </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-settings" class="hidden">
+                    <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
+                        
+                        <div class="card">
+                            <h2>Interface Preferences</h2>
+                            
+                            <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
+                                <label style="margin:0;">Theme Mode</label>
+                                <button onclick="toggleThemeMode()" class="btn-outline" style="width:auto; padding:0.4rem 1rem;">
+                                    <i id="icon-theme" class="ri-moon-line"></i> <span id="txt-theme">Dark Mode</span>
+                                </button>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Accent Color</label>
+                                <div style="display:flex; gap:10px; margin-top:10px;">
+                                    <div class="color-opt" style="background:#C2410C;" onclick="setThemeColor('saffron', this)" data-t="saffron"></div>
+                                    <div class="color-opt" style="background:#2563EB;" onclick="setThemeColor('blue', this)" data-t="blue"></div>
+                                    <div class="color-opt" style="background:#0D9488;" onclick="setThemeColor('teal', this)" data-t="teal"></div>
+                                </div>
+                            </div>
+
+                            <hr style="border:0; border-top:1px solid var(--border); margin: 1.5rem 0;">
+
+                            <label>Notifications (Email)</label>
+                            <p style="font-size:0.7rem; color:var(--text-muted); margin-top:2px; margin-bottom:0.5rem;">Not a mobile app yet, so reminders go to your inbox for now.</p>
+                            <div class="toggle-row">
+                                <span>Morning Reminder Email (6 AM)</span>
+                                <div class="toggle-switch" onclick="this.classList.toggle('active')"></div>
+                            </div>
+                            <div class="toggle-row">
+                                <span>Evening Entry Prompt Email (9 PM)</span>
+                                <div class="toggle-switch active" onclick="this.classList.toggle('active')"></div>
+                            </div>
+
+                        </div>
+
+                        <div class="card">
+                            <h2>Profile & Data</h2>
+
+                            <div class="form-group">
+                                <label>Account</label>
+                                <div style="background:var(--bg-body); border:1px solid var(--border); border-radius:8px; padding:0.75rem 1rem; font-size:0.85rem;">
+                                    <div style="font-weight:700;" id="acct-info-name">-</div>
+                                    <div style="color:var(--text-muted);" id="acct-info-username">@-</div>
+                                    <div style="color:var(--text-muted);" id="acct-info-email">-</div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Profile Picture</label>
+                                <div style="display:flex; align-items:center; gap:1rem;">
+                                    <img src="" id="setting-avatar" style="width:60px; height:60px; border-radius:50%; border:2px solid var(--border);">
+                                    <input type="file" id="file-upload" onchange="uploadAvatar(event)">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group" style="margin-top:1rem;">
+                                <label>Data Management</label>
+                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                                    <button onclick="exportData()" class="btn-outline">Export JSON</button>
+                                    <button onclick="clearLogs()" class="btn-danger">Wipe My Data</button>
+                                </div>
+                            </div>
+                            
+                            <hr style="border:0; border-top:1px solid var(--border); margin: 1.5rem 0;">
+                            
+                            <div id="sec-step-1">
+                                <div class="form-group">
+                                    <label>New Username (once per 108 hrs)</label>
+                                    <input type="text" id="change-user-input" class="input-std" placeholder="Leave blank to keep current">
+                                </div>
+                                <div class="form-group">
+                                    <label>New Email</label>
+                                    <input type="email" id="change-email-input" class="input-std" placeholder="Leave blank to keep current">
+                                </div>
+                                <div id="user-change-msg" class="err-msg"></div>
+                                <button onclick="sendVerificationCode()" class="btn-primary">Send Verification Code</button>
+                            </div>
+
+                            <div id="sec-step-2" class="hidden" style="animation: fadeIn 0.3s;">
+                                <div class="form-group">
+                                    <label>Enter 6-Digit Code</label>
+                                    <input type="number" id="sec-code" class="input-std" placeholder="123456">
+                                </div>
+                                <div style="display:flex; gap:1rem;">
+                                    <button onclick="cancelSecurity()" class="btn-outline">Cancel</button>
+                                    <button onclick="verifyAndSave()" class="btn-primary">Verify & Save</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-journals" class="hidden">
+                    <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
+                        <div class="card">
+                            <h2>📔 Write a Reflection</h2>
+                            <label>Date</label>
+                            <button type="button" id="journal-date-btn" class="input-std date-picker-trigger" onclick="openJournalDatePicker()" style="margin-bottom: 1rem;">
+                                <span id="journal-date-display">--</span>
+                                <span aria-hidden="true">📅</span>
+                            </button>
+                            <div class="form-group">
+                                <label>Reflection</label>
+                                <textarea id="journal-text" class="input-std" rows="8" placeholder="How did today's sādhana go? What are you lacking in, and what helped you stay steady?" style="resize: vertical; font-family: inherit;"></textarea>
+                            </div>
+                            <button type="button" class="btn-primary" onclick="saveJournalEntry()">Save Reflection</button>
+                            <p style="font-size: 0.7rem; color: var(--text-muted); text-align: center; margin-top: 0.6rem;">Private — only you and admins can see this.</p>
+                        </div>
+
+                        <div class="card card-expand">
+                            <h2>My Reflections</h2>
+                            <div id="journal-list" class="list-fill"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-admin" class="hidden">
+                    <div class="card">
+                        <h2>User Management</h2>
+                        <div style="overflow-x:auto;">
+                            <table class="admin-table">
+                                <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Actions</th></tr></thead>
+                                <tbody id="admin-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <div id="date-picker-modal" class="hidden">
+            <div class="wheel-picker-card">
+                <div class="wheel-picker-title">Select Date</div>
+                <div class="wheel-picker-sub">Tap a number to type it in</div>
+
+                <button type="button" class="wheel-today-btn" onclick="jumpToToday()">
+                    <span aria-hidden="true">◎</span> Jump to Today
+                </button>
+
+                <div class="wheel-row">
+                    <div class="wheel-col" id="wheel-col-day"></div>
+                    <div class="wheel-col" id="wheel-col-month"></div>
+                    <div class="wheel-col" id="wheel-col-year"></div>
+                </div>
+
+                <div class="wheel-actions">
+                    <button type="button" class="btn-outline" onclick="closeDatePicker()">Cancel</button>
+                    <button type="button" class="btn-primary" onclick="confirmDatePicker()">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="month-grid-modal" class="hidden">
+            <div class="grid-popup-card">
+                <div class="grid-popup-title">Select Month</div>
+                <div class="grid-popup-grid" id="month-grid-grid"></div>
+                <button type="button" class="btn-outline" style="margin-top: 1rem;" onclick="closeMonthGridPicker()">Cancel</button>
+            </div>
+        </div>
+
+        <div id="admin-view-modal" class="hidden">
+            <div class="wheel-picker-card" style="width: 340px; text-align: left;">
+                <div class="wheel-picker-title" id="admin-view-title" style="text-align:left;">📋 Entries</div>
+                <div id="admin-view-body" class="list-container" style="max-height: 340px; margin-top: 0.75rem;"></div>
+                <div class="wheel-actions">
+                    <button type="button" class="btn-primary" style="width: 100%;" onclick="closeAdminViewModal()">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- IN-MEMORY STORAGE SHIM (artifact preview: no browser storage) ---
+        const memStorage = {
+            _data: {},
+            getItem(key) { return Object.prototype.hasOwnProperty.call(this._data, key) ? this._data[key] : null; },
+            setItem(key, val) { this._data[key] = val; },
+            removeItem(key) { delete this._data[key]; }
+        };
+
+        // --- MOCK DATABASE CLASS ---
+        class MockDB {
+            constructor() {
+                if (!memStorage.getItem('db_users')) {
+                    this.saveUsers([{ 
+                        username: 'admin108', 
+                        password: 'root108', 
+                        email: 'admin@varenium.com',
+                        firstName: 'Śrī', lastName: 'Admin',
+                        role: 'root', 
+                        avatar: 'https://ui-avatars.com/api/?name=Admin',
+                        themeMode: 'light',
+                        colorTheme: 'saffron',
+                        lastUserChange: 0
+                    }]);
+                }
+                if (!memStorage.getItem('db_logs')) this.saveLogs({});
+                if (!memStorage.getItem('db_journals')) this.saveJournals({});
+            }
+
+            getUsers() { return JSON.parse(memStorage.getItem('db_users')); }
+            saveUsers(u) { memStorage.setItem('db_users', JSON.stringify(u)); }
+            
+            getLogs() { return JSON.parse(memStorage.getItem('db_logs')); }
+            saveLogs(l) { memStorage.setItem('db_logs', JSON.stringify(l)); }
+
+            getJournals() { return JSON.parse(memStorage.getItem('db_journals')); }
+            saveJournals(j) { memStorage.setItem('db_journals', JSON.stringify(j)); }
+
+            addUser(firstName, lastName, username, password, email) {
+                const users = this.getUsers();
+                if (users.find(u => u.username === username)) return { success: false, msg: "Username taken" }; 
+                if (users.find(u => u.email === email)) return { success: false, msg: "Email already exists" };
+                
+                users.push({
+                    username, password, email, firstName, lastName, role: 'user', 
+                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName + ' ' + lastName)}`, 
+                    themeMode: 'light', colorTheme: 'saffron',
+                    lastUserChange: Date.now()
+                });
+                this.saveUsers(users);
+                return { success: true };
+            }
+
+            login(username, password) {
+                const user = this.getUsers().find(u => u.username === username && u.password === password);
+                if (user) {
+                    memStorage.setItem('db_session', JSON.stringify(user));
+                    return user;
+                }
+                return null;
+            }
+
+            // Updated to handle overwrite logic cleanly
+            addLog(username, logEntry) {
+                const allLogs = this.getLogs();
+                if (!allLogs[username]) allLogs[username] = [];
+                const idx = allLogs[username].findIndex(l => l.date === logEntry.date);
+                if(idx > -1) allLogs[username][idx] = logEntry;
+                else allLogs[username].push(logEntry);
+                this.saveLogs(allLogs);
+            }
+
+            deleteLog(username, date) {
+                const allLogs = this.getLogs();
+                if (!allLogs[username]) return;
+                allLogs[username] = allLogs[username].filter(l => l.date !== date);
+                this.saveLogs(allLogs);
+            }
+
+            getUserLogs(username) {
+                return this.getLogs()[username] || [];
+            }
+
+            addJournalEntry(username, entry) {
+                const allJournals = this.getJournals();
+                if (!allJournals[username]) allJournals[username] = [];
+                const idx = allJournals[username].findIndex(j => j.date === entry.date);
+                if (idx > -1) allJournals[username][idx] = entry;
+                else allJournals[username].push(entry);
+                this.saveJournals(allJournals);
+            }
+
+            deleteJournalEntry(username, date) {
+                const allJournals = this.getJournals();
+                if (!allJournals[username]) return;
+                allJournals[username] = allJournals[username].filter(j => j.date !== date);
+                this.saveJournals(allJournals);
+            }
+
+            getUserJournal(username) {
+                return this.getJournals()[username] || [];
+            }
+        }
+
+        const DB = new MockDB();
+        let CHART_STORE = {};
+        let CURRENT_USER = null;
+        let TEMP_CODE = null;
+        let EDITING_ENTRY_DATE = null;
+
+        function fullName(user) {
+            if (!user) return '';
+            if (user.firstName || user.lastName) return `${user.firstName || ''} ${user.lastName || ''}`.trim();
+            return user.username;
+        }
+
+        // --- AUTH LOGIC ---
+        function checkSession() {
+            const session = JSON.parse(memStorage.getItem('db_session'));
+            if (session) {
+                loadApp(session);
+            } else {
+                document.getElementById('landing-page').classList.remove('hidden');
+                document.getElementById('app-interface').classList.add('hidden');
+            }
+        }
+
+        function toggleAuth(mode) {
+            document.querySelectorAll('.err-msg').forEach(e => e.style.display = 'none');
+            document.getElementById('auth-nav').classList.toggle('hidden', mode === 'forgot');
+            document.getElementById('tab-login').classList.toggle('active', mode==='login');
+            document.getElementById('tab-reg').classList.toggle('active', mode==='reg');
+            document.getElementById('form-login').classList.toggle('hidden', mode!=='login');
+            document.getElementById('form-reg').classList.toggle('hidden', mode!=='reg');
+            document.getElementById('form-forgot').classList.toggle('hidden', mode!=='forgot');
+        }
+
+        function authLogin() {
+            const u = document.getElementById('l-user').value.trim();
+            const p = document.getElementById('l-pass').value.trim();
+            const errEl = document.getElementById('login-err');
+
+            if(!u || !p) {
+                errEl.innerText = "Please fill in all fields.";
+                errEl.style.display = 'block';
+                return;
+            }
+
+            const user = DB.login(u, p);
+            if(user) {
+                document.getElementById('landing-page').classList.add('hidden');
+                loadApp(user);
+            } else {
+                errEl.innerText = "Incorrect Username or Password. Please try again.";
+                errEl.style.display = 'block';
+            }
+        }
+
+        function authRegister() {
+            const first = document.getElementById('r-first').value.trim();
+            const last = document.getElementById('r-last').value.trim();
+            const email = document.getElementById('r-email').value.trim();
+            const u = document.getElementById('r-user').value.trim();
+            const p = document.getElementById('r-pass').value.trim();
+            const errEl = document.getElementById('reg-err');
+
+            if(!first || !last || !u || !p || !email) {
+                errEl.innerText = "First name, last name, username, email & password are all required.";
+                errEl.style.display = 'block';
+                return;
+            }
+            
+            const res = DB.addUser(first, last, u, p, email);
+            if(res.success) {
+                const user = DB.login(u, p);
+                document.getElementById('landing-page').classList.add('hidden');
+                loadApp(user);
+            } else {
+                errEl.innerText = res.msg;
+                errEl.style.display = 'block';
+            }
+        }
+
+        function sendResetCode() {
+            const email = document.getElementById('f-email').value.trim();
+            const errEl = document.getElementById('forgot-err');
+            const user = DB.getUsers().find(u => u.email === email);
+            if(user) {
+                TEMP_CODE = Math.floor(100000 + Math.random() * 900000);
+                alert(`[MOCK EMAIL]\nTo: ${email}\nReset Code: ${TEMP_CODE}`);
+                document.getElementById('forgot-step-1').classList.add('hidden');
+                document.getElementById('forgot-step-2').classList.remove('hidden');
+                errEl.style.display = 'none';
+            } else {
+                errEl.innerText = "Email not found.";
+                errEl.style.display = 'block';
+            }
+        }
+
+        function confirmResetPass() {
+            const code = parseInt(document.getElementById('f-code').value);
+            const newP = document.getElementById('f-newpass').value;
+            if(code === TEMP_CODE && newP) {
+                const email = document.getElementById('f-email').value;
+                const users = DB.getUsers();
+                const idx = users.findIndex(u => u.email === email);
+                users[idx].password = newP;
+                DB.saveUsers(users);
+                alert("Password reset successfully. Please login.");
+                document.getElementById('f-email').value = '';
+                document.getElementById('f-code').value = '';
+                document.getElementById('f-newpass').value = '';
+                document.getElementById('forgot-step-1').classList.remove('hidden');
+                document.getElementById('forgot-step-2').classList.add('hidden');
+                toggleAuth('login');
+            } else {
+                alert("Invalid Code or Password.");
+            }
+        }
+
+        function logout() {
+            memStorage.removeItem('db_session');
+            CURRENT_USER = null;
+            document.getElementById('app-interface').classList.add('hidden');
+            document.getElementById('landing-page').classList.remove('hidden');
+            document.body.className = '';
+            toggleAuth('login');
+        }
+
+        // --- APP LOGIC ---
+        function loadApp(user) {
+            CURRENT_USER = user;
+            document.getElementById('app-interface').classList.remove('hidden');
+            document.getElementById('user-avatar-img').src = user.avatar;
+            document.getElementById('setting-avatar').src = user.avatar;
+            const isAdmin = user.role === 'admin' || user.role === 'root';
+            document.getElementById('nav-admin').classList.toggle('hidden', !isAdmin);
+            applyTheme(user.themeMode || 'light');
+            document.querySelectorAll('.color-opt').forEach(el => el.classList.remove('active'));
+            const activeColor = document.querySelector(`.color-opt[data-t="${user.colorTheme || 'saffron'}"]`);
+            if(activeColor) activeColor.classList.add('active');
+            document.body.className = `${user.themeMode === 'dark' ? 'dark-mode' : ''} theme-${user.colorTheme || 'saffron'}`;
+            
+            // Init components
+            initDatePicker();
+            updateDashboard();
+            updateAccountInfoBlock();
+        }
+
+        function switchView(viewId, btn) {
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            ['overview', 'stats', 'settings', 'admin', 'journals'].forEach(v => {
+                document.getElementById('view-'+v).classList.add('hidden');
+            });
+            document.getElementById('view-'+viewId).classList.remove('hidden');
+            if(viewId === 'stats') renderStats();
+            if(viewId === 'admin') renderAdmin();
+            if(viewId === 'overview') updateDashboard();
+            if(viewId === 'journals') renderJournals();
+        }
+
+        // --- ROTATING WHEEL DATE PICKER LOGIC (shared by Log Entry & Journals) ---
+        const MONTH_ABBR = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+
+        let committedDate = null;   // { year, month(0-11), day } -- Log Entry's last confirmed value
+        let journalDate = null;     // { year, month(0-11), day } -- Journal's last confirmed value
+        let draftDate = null;       // working value while modal is open
+        let DATE_PICKER_TARGET = 'log'; // 'log' | 'journal'
+
+        function initDatePicker() {
+            const today = new Date();
+            committedDate = { year: today.getFullYear(), month: today.getMonth(), day: today.getDate() };
+            journalDate = { year: today.getFullYear(), month: today.getMonth(), day: today.getDate() };
+            updateDatePickerDisplay();
+            updateJournalDateDisplay();
+        }
+
+        function formatDateObj(dateObj) {
+            const d = String(dateObj.day).padStart(2, '0');
+            const m = MONTH_ABBR[dateObj.month];
+            const y = dateObj.year;
+            return `${d} ${m} ${y}`;
+        }
+
+        function updateDatePickerDisplay() {
+            document.getElementById('date-picker-display').innerText = formatDateObj(committedDate);
+        }
+
+        function updateJournalDateDisplay() {
+            document.getElementById('journal-date-display').innerText = formatDateObj(journalDate);
+        }
+
+        function getFormattedDate() {
+            const y = committedDate.year;
+            const mStr = String(committedDate.month + 1).padStart(2, '0');
+            const dStr = String(committedDate.day).padStart(2, '0');
+            return `${y}-${mStr}-${dStr}`;
+        }
+
+        function getFormattedJournalDate() {
+            const y = journalDate.year;
+            const mStr = String(journalDate.month + 1).padStart(2, '0');
+            const dStr = String(journalDate.day).padStart(2, '0');
+            return `${y}-${mStr}-${dStr}`;
+        }
+
+        // --- Generic vertical drum wheel column (Android-picker style) ---
+        function makeWheelColumn(el, values, startIndex, onSettle, pickerConfig) {
+            let vals = values;
+            let currentIndex = startIndex;
+
+            function render() {
+                el.innerHTML = '';
+                const item = document.createElement('div');
+                item.className = 'wheel-item center';
+                item.textContent = vals[currentIndex];
+                item.addEventListener('click', () => {
+                    if (!pickerConfig) return;
+                    if (pickerConfig.type === 'grid') {
+                        pickerConfig.openGrid(currentIndex, (idx) => {
+                            currentIndex = idx;
+                            settle();
+                        });
+                    } else {
+                        enterManualMode();
+                    }
+                });
+                el.appendChild(item);
+            }
+
+            function settle() {
+                currentIndex = Math.max(0, Math.min(vals.length - 1, currentIndex));
+                render();
+                onSettle(currentIndex);
+            }
+
+            // --- Tap-to-type: tapping the number opens numeric entry ---
+            // Only digits 0-9 (plus editing keys) are accepted -- anything else is ignored.
+            function enterManualMode() {
+                el.innerHTML = '';
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.inputMode = 'numeric';
+                input.autocomplete = 'off';
+                input.className = 'wheel-manual-input';
+                input.value = pickerConfig.currentNumber();
+                el.appendChild(input);
+                input.focus();
+                input.select();
+
+                input.addEventListener('keydown', (e) => {
+                    const allowed = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Escape'];
+                    if (allowed.includes(e.key)) {
+                        if (e.key === 'Enter') input.blur();
+                        if (e.key === 'Escape') { input.dataset.cancelled = '1'; input.blur(); }
+                        return;
+                    }
+                    if (!/^[0-9]$/.test(e.key)) {
+                        e.preventDefault(); // non-digit keys simply don't register
+                    }
+                });
+
+                function finish() {
+                    const cancelled = input.dataset.cancelled === '1';
+                    const raw = input.value.replace(/[^0-9]/g, '');
+
+                    if (cancelled || raw === '') { render(); return; }
+
+                    let num = parseInt(raw, 10);
+                    num = Math.max(pickerConfig.min, Math.min(pickerConfig.max, num));
+                    currentIndex = pickerConfig.indexFromNumber(num);
+                    settle();
+                }
+                input.addEventListener('blur', finish);
+            }
+
+            render();
+
+            return {
+                setValues(newValues, newIndex) {
+                    vals = newValues;
+                    currentIndex = newIndex;
+                    render();
+                },
+                setIndex(idx) {
+                    currentIndex = idx;
+                    settle();
+                },
+                getIndex() { return currentIndex; }
+            };
+        }
+
+
+        function daysInMonth(year, month) {
+            return new Date(year, month + 1, 0).getDate();
+        }
+
+        function buildYearRange() {
+            const base = new Date().getFullYear();
+            const years = [];
+            for (let y = base - 18; y <= base + 18; y++) years.push(y);
+            return years;
+        }
+
+        let dayWheel = null, monthWheel = null, yearWheel = null;
+
+        function refreshDayWheel() {
+            const total = daysInMonth(draftDate.year, draftDate.month);
+            if (draftDate.day > total) draftDate.day = total;
+            const dayVals = Array.from({ length: total }, (_, i) => String(i + 1).padStart(2, '0'));
+            dayWheel.setValues(dayVals, draftDate.day - 1);
+        }
+
+        function openDatePicker() {
+            DATE_PICKER_TARGET = 'log';
+            draftDate = { ...committedDate };
+            buildDatePickerWheels();
+            document.getElementById('date-picker-modal').classList.remove('hidden');
+        }
+
+        function openJournalDatePicker() {
+            DATE_PICKER_TARGET = 'journal';
+            draftDate = { ...journalDate };
+            buildDatePickerWheels();
+            document.getElementById('date-picker-modal').classList.remove('hidden');
+        }
+
+        function buildDatePickerWheels() {
+            const dayEl = document.getElementById('wheel-col-day');
+            const monthEl = document.getElementById('wheel-col-month');
+            const yearEl = document.getElementById('wheel-col-year');
+
+            const dayTotal = daysInMonth(draftDate.year, draftDate.month);
+            const dayVals = Array.from({ length: dayTotal }, (_, i) => String(i + 1).padStart(2, '0'));
+            dayWheel = makeWheelColumn(dayEl, dayVals, draftDate.day - 1, (idx) => {
+                draftDate.day = idx + 1;
+            }, {
+                type: 'manual',
+                min: 1, max: 31,
+                currentNumber: () => String(draftDate.day),
+                indexFromNumber: (num) => Math.min(num, daysInMonth(draftDate.year, draftDate.month)) - 1
+            });
+
+            monthWheel = makeWheelColumn(monthEl, MONTH_ABBR, draftDate.month, (idx) => {
+                draftDate.month = idx;
+                refreshDayWheel();
+            }, {
+                type: 'grid',
+                openGrid: (activeIndex, onSelect) => openMonthGridPicker(activeIndex, onSelect)
+            });
+
+            const years = buildYearRange();
+            const yearIdx = Math.max(0, years.indexOf(draftDate.year));
+            yearWheel = makeWheelColumn(yearEl, years, yearIdx, (idx) => {
+                draftDate.year = years[idx];
+                refreshDayWheel();
+            }, {
+                type: 'manual',
+                min: years[0], max: years[years.length - 1],
+                currentNumber: () => String(draftDate.year),
+                indexFromNumber: (num) => {
+                    const clamped = Math.max(years[0], Math.min(years[years.length - 1], num));
+                    return years.indexOf(clamped);
+                }
+            });
+        }
+
+        // --- Month grid picker: 12 fixed boxes, no keyboard ever appears ---
+        function openMonthGridPicker(activeIndex, onSelect) {
+            const grid = document.getElementById('month-grid-grid');
+            grid.innerHTML = '';
+            MONTH_ABBR.forEach((m, idx) => {
+                const cell = document.createElement('div');
+                cell.className = 'grid-popup-cell' + (idx === activeIndex ? ' active' : '');
+                cell.textContent = m;
+                cell.addEventListener('click', () => {
+                    onSelect(idx);
+                    closeMonthGridPicker();
+                });
+                grid.appendChild(cell);
+            });
+            document.getElementById('month-grid-modal').classList.remove('hidden');
+        }
+
+        function closeMonthGridPicker() {
+            document.getElementById('month-grid-modal').classList.add('hidden');
+        }
+
+        function closeDatePicker() {
+            document.getElementById('date-picker-modal').classList.add('hidden');
+        }
+
+        function confirmDatePicker() {
+            if (DATE_PICKER_TARGET === 'journal') {
+                journalDate = { ...draftDate };
+                updateJournalDateDisplay();
+            } else {
+                committedDate = { ...draftDate };
+                updateDatePickerDisplay();
+            }
+            closeDatePicker();
+        }
+
+        function jumpToToday() {
+            const today = new Date();
+            draftDate = { year: today.getFullYear(), month: today.getMonth(), day: today.getDate() };
+
+            const years = buildYearRange();
+            const yearIdx = Math.max(0, years.indexOf(draftDate.year));
+
+            monthWheel.setValues(MONTH_ABBR, draftDate.month);
+            yearWheel.setValues(years, yearIdx);
+            refreshDayWheel();
+        }
+
+        // --- SUBMISSION ---
+        function submitEntry(e) {
+            e.preventDefault();
+            const date = getFormattedDate(); 
+            const r = parseFloat(document.getElementById('e-rounds').value)||0;
+            const rd = parseFloat(document.getElementById('e-read').value)||0;
+            const l = parseFloat(document.getElementById('e-lec').value)||0;
+            const s = parseFloat(document.getElementById('e-seva').value)||0;
+
+            let score = Math.round(
+                (Math.min(r, 16) * 2.5) + 
+                (Math.min(rd, 60) / 3) + 
+                (Math.min(l, 60) / 3) + 
+                (Math.min(s, 60) / 3)
+            );
+            if(score > 100) score = 100;
+
+            // Overwrite / Lock Check
+            const existingLog = DB.getUserLogs(CURRENT_USER.username).find(l => l.date === date);
+            const weekStart = getWeekStart();
+            const entryDateObj = new Date(date);
+            
+            // Normalize time for comparison
+            entryDateObj.setHours(0,0,0,0);
+
+            if (existingLog) {
+                if (entryDateObj < weekStart) {
+                    alert("🔒 History Locked: You cannot edit entries from previous weeks.");
+                    return;
+                }
+                if (EDITING_ENTRY_DATE !== date && !confirm(`An entry for ${date} already exists. Overwrite?`)) {
+                    return;
+                }
+                // If confirmed (or editing this exact entry), logic proceeds to addLog which overwrites in DB
+            } else if (entryDateObj < weekStart) {
+                 if (!confirm("⚠️ You are adding data to a past week. Proceed?")) return;
+            }
+
+            DB.addLog(CURRENT_USER.username, { date, rounds:r, reading:rd, lecture:l, service:s, score });
+            EDITING_ENTRY_DATE = null;
+            updateDashboard();
+            closeLogEntryDropdown();
+        }
+
+        function editEntry(date) {
+            const log = DB.getUserLogs(CURRENT_USER.username).find(l => l.date === date);
+            if (!log) return;
+
+            const [y, m, d] = date.split('-').map(Number);
+            committedDate = { year: y, month: m - 1, day: d };
+            updateDatePickerDisplay();
+
+            document.getElementById('e-rounds').value = log.rounds;
+            document.getElementById('e-read').value = log.reading;
+            document.getElementById('e-lec').value = log.lecture;
+            document.getElementById('e-seva').value = log.service;
+
+            EDITING_ENTRY_DATE = date;
+
+            const dropdown = document.getElementById('log-entry-dropdown');
+            const toggle = document.getElementById('log-entry-toggle');
+            dropdown.classList.add('open');
+            toggle.classList.add('open');
+            dropdown.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function deleteEntrySingle(date) {
+            if (!confirm(`Delete your entry for ${date}? This cannot be undone.`)) return;
+            DB.deleteLog(CURRENT_USER.username, date);
+            if (EDITING_ENTRY_DATE === date) EDITING_ENTRY_DATE = null;
+            updateDashboard();
+        }
+
+        // --- LOG ENTRY DROPDOWN ---
+        function toggleLogEntryForm() {
+            const dropdown = document.getElementById('log-entry-dropdown');
+            const toggle = document.getElementById('log-entry-toggle');
+            const isOpen = dropdown.classList.toggle('open');
+            toggle.classList.toggle('open', isOpen);
+            if (!isOpen) EDITING_ENTRY_DATE = null;
+        }
+
+        function closeLogEntryDropdown() {
+            document.getElementById('log-entry-dropdown').classList.remove('open');
+            document.getElementById('log-entry-toggle').classList.remove('open');
+            EDITING_ENTRY_DATE = null;
+        }
+
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('log-entry-dropdown');
+            const toggle = document.getElementById('log-entry-toggle');
+            if (!dropdown || !dropdown.classList.contains('open')) return;
+            if (!dropdown.contains(e.target) && !toggle.contains(e.target)) {
+                closeLogEntryDropdown();
+            }
+        });
+
+        // --- DASHBOARD RENDERER ---
+        
+        function getWeekStart() {
+            const now = new Date();
+            const day = now.getDay(); 
+            const diff = now.getDate() - day; 
+            const sunday = new Date(now.setDate(diff));
+            sunday.setHours(0,0,0,0);
+            return sunday;
+        }
+
+        function updateDashboard() {
+            const myLogs = DB.getUserLogs(CURRENT_USER.username);
+            
+            // 1. History List
+            const listEl = document.getElementById('log-list');
+            listEl.innerHTML = '';
+            myLogs.sort((a,b) => new Date(b.date) - new Date(a.date));
+            myLogs.forEach(log => {
+                listEl.innerHTML += `
+                    <div class="list-item">
+                        <div>
+                            <div style="font-weight:600">${log.date}</div>
+                            <div style="font-size:0.8rem; color:var(--text-muted)">${log.rounds} Rds | ${log.reading}m Read</div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span class="score-badge">${log.score}</span>
+                            <button type="button" onclick="editEntry('${log.date}')" title="Edit entry" style="background:none; border:none; font-size:0.95rem; cursor:pointer; padding:2px;">✏️</button>
+                            <button type="button" onclick="deleteEntrySingle('${log.date}')" title="Delete entry" style="background:none; border:none; font-size:0.95rem; cursor:pointer; padding:2px;">🗑️</button>
+                        </div>
+                    </div>`;
+            });
+
+            // 2. Weekly Calc
+            const weekStart = getWeekStart();
+            const weeklyLogs = myLogs.filter(l => { const d = new Date(l.date); return d >= weekStart; });
+            const weeklyScore = weeklyLogs.reduce((acc, cur) => acc + cur.score, 0);
+            
+            document.getElementById('txt-weekly').innerText = `${weeklyScore}/700`;
+
+            // 3. Balance Data
+            const cnt = weeklyLogs.length || 1;
+            const avgs = [
+                (weeklyLogs.reduce((a,c)=>a+(c.rounds/16),0)/cnt)*100,
+                (weeklyLogs.reduce((a,c)=>a+(c.reading/60),0)/cnt)*100,
+                (weeklyLogs.reduce((a,c)=>a+(c.lecture/60),0)/cnt)*100,
+                (weeklyLogs.reduce((a,c)=>a+(c.service/60),0)/cnt)*100,
+            ].map(x=>Math.min(100,x));
+
+            // 4. Global Leaderboard
+            const allLogs = DB.getLogs();
+            const allUsersForNames = DB.getUsers();
+            const lbData = Object.keys(allLogs).map(user => {
+                const uLogs = allLogs[user];
+                const wScore = uLogs.filter(l => { const d = new Date(l.date); return d >= weekStart; })
+                                    .reduce((acc, c) => acc + c.score, 0);
+                const uRecord = allUsersForNames.find(u => u.username === user);
+                return { user, displayName: fullName(uRecord) || user, score: wScore };
+            }).sort((a,b) => b.score - a.score);
+
+            const lbEl = document.getElementById('leaderboard-list');
+            lbEl.innerHTML = '';
+            lbData.forEach((d, i) => {
+                let rankClass = 'rank-blue';
+                if(i===0) rankClass='gold'; else if(i===1) rankClass='silver'; else if(i===2) rankClass='bronze';
+                
+                lbEl.innerHTML += `
+                    <div class="list-item">
+                        <div style="display:flex; align-items:center;">
+                            <div class="rank-circle ${rankClass}">${i+1}</div>
+                            <span style="font-weight:600">${d.displayName}</span>
+                        </div>
+                        <span class="lb-score-val">${d.score}</span>
+                    </div>`;
+            });
+
+            renderCharts(weeklyScore, avgs, lbData, myLogs);
+        }
+
+        function renderCharts(wScore, balanceData, lbData, myLogs) {
+            const colors = {
+                primary: getComputedStyle(document.body).getPropertyValue('--primary').trim(),
+                grid: getComputedStyle(document.body).getPropertyValue('--chart-grid').trim(),
+                text: getComputedStyle(document.body).getPropertyValue('--chart-text').trim()
+            };
+
+            Chart.defaults.color = colors.text;
+            Chart.defaults.borderColor = colors.grid;
+
+            // 1. Weekly Ring
+            const donutData = {
+                datasets: [{
+                    data: [wScore, Math.max(0, 700 - wScore)],
+                    backgroundColor: [wScore >= 700 ? '#059669' : colors.primary, '#E5E7EB'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            };
+
+            if (CHART_STORE['chart-weekly']) {
+                CHART_STORE['chart-weekly'].data = donutData;
+                CHART_STORE['chart-weekly'].update(); 
+            } else {
+                const ctx = document.getElementById('chart-weekly').getContext('2d');
+                CHART_STORE['chart-weekly'] = new Chart(ctx, { 
+                    type: 'doughnut', 
+                    data: donutData, 
+                    options: { 
+                        cutout: '75%', responsive: true, maintainAspectRatio: false, 
+                        animation: { animateScale: true, animateRotate: true },
+                        plugins: { tooltip: {enabled:false} } 
+                    } 
+                });
+            }
+
+            // 2. Radar
+            const radarData = {
+                labels: ['Chanting', 'Reading', 'Lecture', 'Service'],
+                datasets: [{
+                    label: 'Current Balance',
+                    data: balanceData,
+                    borderColor: colors.primary,
+                    backgroundColor: colors.primary + '33',
+                    borderWidth: 2,
+                    pointBackgroundColor: colors.primary
+                }]
+            };
+
+            if(CHART_STORE['chart-radar']) {
+                CHART_STORE['chart-radar'].data = radarData;
+                CHART_STORE['chart-radar'].options.scales.r.grid.circular = true;
+                CHART_STORE['chart-radar'].update();
+            } else {
+                const ctx = document.getElementById('chart-radar').getContext('2d');
+                CHART_STORE['chart-radar'] = new Chart(ctx, {
+                    type: 'radar',
+                    data: radarData,
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        scales: { r: { suggestMin: 0, suggestMax: 100, ticks: { display: false }, grid: { circular: true } } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+
+            // 3. Leaderboard Bar
+            const barData = {
+                labels: lbData.slice(0, 5).map(x => x.displayName),
+                datasets: [{
+                    data: lbData.slice(0, 5).map(x => x.score),
+                    backgroundColor: colors.primary, 
+                    borderRadius: 4
+                }]
+            };
+
+            if(CHART_STORE['chart-bar']) {
+                CHART_STORE['chart-bar'].data = barData;
+                CHART_STORE['chart-bar'].data.datasets[0].backgroundColor = colors.primary;
+                CHART_STORE['chart-bar'].update();
+            } else {
+                const ctx = document.getElementById('chart-bar').getContext('2d');
+                CHART_STORE['chart-bar'] = new Chart(ctx, {
+                    type: 'bar',
+                    data: barData,
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        scales: { x: { grid: { display: false } }, y: { display: false } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+
+            // 4. Trend Line
+            const trendData = [...myLogs].sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(-21);
+            const scores = trendData.map(l => l.score);
+            const dates = trendData.map(l => l.date.substring(5));
+            const sma = scores.map((val, idx, arr) => {
+                if (idx < 2) return val; 
+                return (arr[idx] + arr[idx-1] + arr[idx-2]) / 3;
+            });
+            const upper = sma.map(v => Math.min(100, v + 10));
+            const lower = sma.map(v => Math.max(0, v - 10));
+
+            const lineData = {
+                labels: dates,
+                datasets: [
+                    { label: 'Score', data: scores, borderColor: colors.primary, backgroundColor: colors.primary, tension: 0.3, pointRadius: 3 },
+                    { label: 'SMA (3-Day)', data: sma, borderColor: '#2563EB', borderDash: [5, 5], pointRadius: 0, tension: 0.3 },
+                    { label: 'Range', data: upper, borderColor: 'transparent', backgroundColor: colors.primary + '1A', fill: '+1', pointRadius: 0 },
+                    { label: 'Range Low', data: lower, borderColor: 'transparent', pointRadius: 0 }
+                ]
+            };
+
+            if(CHART_STORE['chart-trend']) {
+                CHART_STORE['chart-trend'].data = lineData;
+                CHART_STORE['chart-trend'].update();
+            } else {
+                const ctx = document.getElementById('chart-trend').getContext('2d');
+                CHART_STORE['chart-trend'] = new Chart(ctx, {
+                    type: 'line', data: lineData,
+                    options: {
+                        responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                        scales: { y: { beginAtZero: true, max: 110 }, x: { grid: { display: false } } },
+                        plugins: { legend: { display: true, labels: { boxWidth: 10, font: {size: 10} } } }
+                    }
+                });
+            }
+        }
+
+        // --- STATS & AI ---
+        function renderStats() {
+            const logs = DB.getUserLogs(CURRENT_USER.username);
+            const scores = logs.map(l => l.score);
+            
+            // Yearly
+            const yearlyMap = {};
+            logs.forEach(l => {
+                const y = l.date.substring(0, 4);
+                if (!yearlyMap[y]) yearlyMap[y] = 0;
+                yearlyMap[y] += l.score;
+            });
+            const yList = document.getElementById('yearly-list');
+            yList.innerHTML = '';
+            Object.keys(yearlyMap).sort((a,b) => b - a).forEach(year => {
+                yList.innerHTML += `<div class="year-row"><span>${year}</span><span class="year-val">${yearlyMap[year]} pts</span></div>`;
+            });
+
+            if(!scores.length) return;
+
+            // Math
+            const n = scores.length;
+            const mean = scores.reduce((a,b)=>a+b,0) / n;
+            const sorted = [...scores].sort((a,b)=>a-b);
+            const median = sorted[Math.floor(n/2)];
+            
+            const freq = {};
+            let maxFreq = 0; let mode = scores[0];
+            scores.forEach(x => { freq[x]=(freq[x]||0)+1; if(freq[x]>maxFreq){maxFreq=freq[x]; mode=x;} });
+
+            const variance = scores.reduce((a,b) => a + Math.pow(b-mean, 2), 0) / n;
+            const dev = Math.sqrt(variance);
+            const cv = mean === 0 ? 0 : (dev / mean) * 100;
+            const m3 = scores.reduce((a,b) => a + Math.pow(b-mean, 3), 0) / n;
+            const skewness = dev === 0 ? 0 : m3 / Math.pow(dev, 3);
+            const m4 = scores.reduce((a,b) => a + Math.pow(b-mean, 4), 0) / n;
+            const kurtosis = dev === 0 ? 0 : (m4 / Math.pow(dev, 4)) - 3;
+
+            document.getElementById('s-mean').innerText = mean.toFixed(1);
+            document.getElementById('s-median').innerText = median;
+            document.getElementById('s-mode').innerText = mode;
+            document.getElementById('s-dev').innerText = dev.toFixed(2);
+            document.getElementById('s-var').innerText = variance.toFixed(1);
+            document.getElementById('s-cv').innerText = cv.toFixed(1) + '%';
+            document.getElementById('s-skew').innerText = skewness.toFixed(2);
+            document.getElementById('s-kurt').innerText = kurtosis.toFixed(2);
+
+            // AI NARRATIVE
+            let text = `Analysis of your last ${n} days of practice. `;
+            if(cv < 10) text += "<strong>Your determination is unshakable.</strong> You show incredible steadiness day in and day out. ";
+            else if(cv < 25) text += "<strong>You have a solid routine.</strong> There are minor fluctuations, but your foundation is strong. ";
+            else text += "<strong>Life is testing your focus.</strong> Your practice varies widely; try to establish a minimum daily baseline. ";
+
+            if(skewness < -0.5) text += "You generally perform very well; the low scores are just rare exceptions. Don't let them discourage you. ";
+            else if(skewness > 0.5) text += "You have moments of brilliance where you exceed expectations. Let's try to make those 'high' days your new normal. ";
+            
+            if(scores.length >= 5) {
+                const recent = scores.slice(-5);
+                const slope = recent[4] - recent[0];
+                if(slope > 10) text += "<strong>You are building momentum!</strong> Your spiritual strength is visibly growing this week.";
+                else if(slope < -10) text += "<strong>Stay vigilant.</strong> Your recent intensity has dipped slightly. Re-ignite your enthusiasm.";
+            }
+
+            document.getElementById('ai-text').innerHTML = text;
+
+            // Hist Chart
+            const bins = [0,0,0,0,0];
+            scores.forEach(s => {
+                if(s<=20) bins[0]++; else if(s<=40) bins[1]++; else if(s<=60) bins[2]++; else if(s<=80) bins[3]++; else bins[4]++;
+            });
+            
+            if(CHART_STORE['chart-hist']) CHART_STORE['chart-hist'].destroy();
+            const ctx = document.getElementById('chart-hist').getContext('2d');
+            const color = getComputedStyle(document.body).getPropertyValue('--primary');
+            CHART_STORE['chart-hist'] = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: ['0-20','21-40','41-60','61-80','81-100'], datasets:[{ label:'Frequency', data:bins, backgroundColor: color, borderRadius:6 }] },
+                options: { responsive:true, maintainAspectRatio:false, plugins: { legend: {display:false} } }
+            });
+        }
+
+        // --- JOURNALS ---
+        let EDITING_JOURNAL_DATE = null;
+
+        function renderJournals() {
+            updateJournalDateDisplay();
+            const entries = DB.getUserJournal(CURRENT_USER.username).slice().sort((a,b) => new Date(b.date) - new Date(a.date));
+            const listEl = document.getElementById('journal-list');
+            listEl.innerHTML = '';
+
+            if (entries.length === 0) {
+                listEl.innerHTML = `<p style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:1.5rem 0;">No reflections yet — your first one is above.</p>`;
+                return;
+            }
+
+            entries.forEach(j => {
+                const preview = (j.text || '').length > 90 ? j.text.slice(0, 90) + '…' : (j.text || '');
+                listEl.innerHTML += `
+                    <div class="list-item" style="align-items:flex-start;">
+                        <div style="flex:1; padding-right:0.5rem;">
+                            <div style="font-weight:600">${j.date}</div>
+                            <div style="font-size:0.8rem; color:var(--text-muted); white-space:pre-wrap;">${preview.replace(/</g,'&lt;')}</div>
+                        </div>
+                        <div style="display:flex; gap:8px; flex-shrink:0;">
+                            <button type="button" onclick="editJournalEntry('${j.date}')" title="Edit reflection" style="background:none; border:none; font-size:0.95rem; cursor:pointer; padding:2px;">✏️</button>
+                            <button type="button" onclick="deleteJournalEntrySingle('${j.date}')" title="Delete reflection" style="background:none; border:none; font-size:0.95rem; cursor:pointer; padding:2px;">🗑️</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function saveJournalEntry() {
+            const date = getFormattedJournalDate();
+            const text = document.getElementById('journal-text').value.trim();
+            if (!text) { alert("Write a few words before saving."); return; }
+
+            DB.addJournalEntry(CURRENT_USER.username, { date, text });
+            EDITING_JOURNAL_DATE = null;
+            document.getElementById('journal-text').value = '';
+            renderJournals();
+        }
+
+        function editJournalEntry(date) {
+            const entry = DB.getUserJournal(CURRENT_USER.username).find(j => j.date === date);
+            if (!entry) return;
+
+            const [y, m, d] = date.split('-').map(Number);
+            journalDate = { year: y, month: m - 1, day: d };
+            updateJournalDateDisplay();
+            document.getElementById('journal-text').value = entry.text;
+            EDITING_JOURNAL_DATE = date;
+            document.getElementById('journal-text').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function deleteJournalEntrySingle(date) {
+            if (!confirm(`Delete your reflection for ${date}? This cannot be undone.`)) return;
+            DB.deleteJournalEntry(CURRENT_USER.username, date);
+            if (EDITING_JOURNAL_DATE === date) EDITING_JOURNAL_DATE = null;
+            renderJournals();
+        }
+
+        // --- SETTINGS ---
+        function toggleThemeMode() {
+            const isDark = document.body.classList.contains('dark-mode');
+            const newMode = isDark ? 'light' : 'dark';
+            saveThemePref(newMode, CURRENT_USER.colorTheme || 'saffron');
+        }
+
+        function setThemeColor(color, el) {
+            document.querySelectorAll('.color-opt').forEach(e => e.classList.remove('active'));
+            el.classList.add('active');
+            saveThemePref(CURRENT_USER.themeMode || 'light', color);
+        }
+
+        function applyTheme(mode) {
+            const body = document.body;
+            if(mode === 'dark') body.classList.add('dark-mode');
+            else body.classList.remove('dark-mode');
+            document.getElementById('txt-theme').innerText = mode === 'dark' ? "Light Mode" : "Dark Mode";
+            document.getElementById('icon-theme').className = mode === 'dark' ? "ri-sun-line" : "ri-moon-line";
+        }
+
+        function saveThemePref(mode, color) {
+            CURRENT_USER.themeMode = mode;
+            CURRENT_USER.colorTheme = color;
+            document.body.className = `${mode === 'dark' ? 'dark-mode' : ''} theme-${color}`;
+            updateUserRecord();
+            if(!document.getElementById('view-overview').classList.contains('hidden')) updateDashboard();
+        }
+
+        function uploadAvatar(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                CURRENT_USER.avatar = evt.target.result;
+                updateUserRecord();
+                document.getElementById('user-avatar-img').src = CURRENT_USER.avatar;
+                document.getElementById('setting-avatar').src = CURRENT_USER.avatar;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function sendVerificationCode() {
+            const newU = document.getElementById('change-user-input').value.trim();
+            const newEmail = document.getElementById('change-email-input').value.trim();
+            const msgEl = document.getElementById('user-change-msg');
+            msgEl.style.display = 'none';
+
+            if (!newU && !newEmail) {
+                msgEl.style.color = '#EF4444';
+                msgEl.innerText = "Enter a new username and/or email to change.";
+                msgEl.style.display = 'block';
+                return;
+            }
+
+            const users = DB.getUsers();
+
+            if (newU) {
+                const lastChange = CURRENT_USER.lastUserChange || 0;
+                const diffHours = (Date.now() - lastChange) / (1000 * 60 * 60);
+                if (diffHours < 108) {
+                    const remaining = Math.ceil(108 - diffHours);
+                    msgEl.style.color = '#EF4444';
+                    msgEl.innerText = `Please wait ${remaining} more hours to change username.`;
+                    msgEl.style.display = 'block';
+                    return;
+                }
+                if (newU !== CURRENT_USER.username && users.find(u => u.username === newU)) {
+                    msgEl.style.color = '#EF4444';
+                    msgEl.innerText = "Username taken.";
+                    msgEl.style.display = 'block';
+                    return;
+                }
+                CURRENT_USER.tempNewUsername = newU;
+            }
+
+            if (newEmail) {
+                if (!newEmail.includes('@')) {
+                    msgEl.style.color = '#EF4444';
+                    msgEl.innerText = "Enter a valid email address.";
+                    msgEl.style.display = 'block';
+                    return;
+                }
+                if (newEmail !== CURRENT_USER.email && users.find(u => u.email === newEmail)) {
+                    msgEl.style.color = '#EF4444';
+                    msgEl.innerText = "Email already in use.";
+                    msgEl.style.display = 'block';
+                    return;
+                }
+                CURRENT_USER.tempNewEmail = newEmail;
+            }
+
+            TEMP_CODE = Math.floor(100000 + Math.random() * 900000);
+            const sendTo = CURRENT_USER.tempNewEmail || CURRENT_USER.email;
+            alert(`[MOCK EMAIL SERVICE]\nTo: ${sendTo}\nYour Verification Code: ${TEMP_CODE}`);
+            document.getElementById('sec-step-1').classList.add('hidden');
+            document.getElementById('sec-step-2').classList.remove('hidden');
+        }
+
+        function verifyAndSave() {
+            const inputCode = parseInt(document.getElementById('sec-code').value);
+            if(inputCode === TEMP_CODE) {
+                const originalUsername = CURRENT_USER.username;
+                if(CURRENT_USER.tempNewUsername) {
+                    CURRENT_USER.username = CURRENT_USER.tempNewUsername;
+                    CURRENT_USER.lastUserChange = Date.now();
+                    delete CURRENT_USER.tempNewUsername;
+                }
+                if(CURRENT_USER.tempNewEmail) {
+                    CURRENT_USER.email = CURRENT_USER.tempNewEmail;
+                    delete CURRENT_USER.tempNewEmail;
+                }
+                updateUserRecord(originalUsername);
+                alert("Profile Updated Successfully!");
+                cancelSecurity();
+                document.getElementById('change-user-input').value = '';
+                document.getElementById('change-email-input').value = '';
+                document.getElementById('user-change-msg').style.display = 'none';
+                updateAccountInfoBlock();
+            } else {
+                alert("Incorrect Code.");
+            }
+        }
+
+        function cancelSecurity() {
+            document.getElementById('sec-step-1').classList.remove('hidden');
+            document.getElementById('sec-step-2').classList.add('hidden');
+            document.getElementById('sec-code').value = '';
+            delete CURRENT_USER.tempNewUsername;
+            delete CURRENT_USER.tempNewEmail;
+            TEMP_CODE = null;
+        }
+
+        function updateUserRecord(lookupUsername) {
+            const key = lookupUsername || CURRENT_USER.username;
+            const allUsers = DB.getUsers();
+            const idx = allUsers.findIndex(u => u.username === key);
+            if(idx > -1) allUsers[idx] = CURRENT_USER;
+            DB.saveUsers(allUsers);
+            memStorage.setItem('db_session', JSON.stringify(CURRENT_USER));
+        }
+
+        function updateAccountInfoBlock() {
+            document.getElementById('acct-info-name').innerText = fullName(CURRENT_USER);
+            document.getElementById('acct-info-username').innerText = '@' + CURRENT_USER.username;
+            document.getElementById('acct-info-email').innerText = CURRENT_USER.email;
+        }
+
+        function clearLogs() {
+            if(confirm("Are you sure? This cannot be undone.")) {
+                const allLogs = DB.getLogs();
+                allLogs[CURRENT_USER.username] = [];
+                DB.saveLogs(allLogs);
+                updateDashboard();
+            }
+        }
+        
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB.getUserLogs(CURRENT_USER.username)));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "sadhana_logs.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+
+        // --- ADMIN ---
+        function renderAdmin() {
+            const allUsers = DB.getUsers();
+            const tbody = document.getElementById('admin-tbody');
+            tbody.innerHTML = '';
+            
+            const adminCount = allUsers.filter(u => u.role === 'admin' || u.role === 'root').length;
+
+            allUsers.forEach((u, i) => {
+                let badge = u.role === 'root' ? 'badge-root' : (u.role === 'admin' ? 'badge-admin' : 'badge-user');
+                let roleTxt = u.role.toUpperCase();
+                let actions = '';
+                const canManage = (CURRENT_USER.role === 'root') || (CURRENT_USER.role === 'admin' && u.role === 'user');
+
+                actions += `<button onclick="viewUserEntries('${u.username}')" style="color:#2563EB;margin-right:5px;border:none;background:none;font-size:0.8rem;">Entries</button>`;
+                actions += `<button onclick="viewUserJournal('${u.username}')" style="color:#7C3AED;margin-right:5px;border:none;background:none;font-size:0.8rem;">Journal</button>`;
+
+                if(canManage && u.username !== CURRENT_USER.username) {
+                    if(u.role === 'user' && adminCount < 19) actions += `<button onclick="promoteUser(${i})" style="color:blue;margin-right:5px;border:none;background:none;font-size:0.8rem;">Promote</button>`;
+                    if(u.role === 'admin' && CURRENT_USER.role === 'root') actions += `<button onclick="demoteUser(${i})" style="color:orange;margin-right:5px;border:none;background:none;font-size:0.8rem;">Demote</button>`;
+                    actions += `<button onclick="resetPass(${i})" style="color:green;margin-right:5px;border:none;background:none;font-size:0.8rem;">Reset PW</button>`;
+                    actions += `<button onclick="deleteUser(${i})" style="color:red;border:none;background:none;font-size:0.8rem;">Delete</button>`;
+                }
+                tbody.innerHTML += `<tr><td><div style="display:flex;align-items:center;gap:10px;"><img src="${u.avatar}" style="width:30px;height:30px;border-radius:50%"> <div><div style="font-weight:700;">${fullName(u)}</div><div style="font-size:0.72rem;color:var(--text-muted);">@${u.username}</div></div></div></td><td>${u.email||'-'}</td><td><span class="badge ${badge}">${roleTxt}</span></td><td>${actions}</td></tr>`;
+            });
+        }
+
+        function promoteUser(idx) { DB.getUsers()[idx].role = 'admin'; DB.saveUsers(DB.getUsers()); renderAdmin(); }
+        function demoteUser(idx) { DB.getUsers()[idx].role = 'user'; DB.saveUsers(DB.getUsers()); renderAdmin(); }
+        function resetPass(idx) { const p = prompt("New Pass"); if(p) { const u=DB.getUsers(); u[idx].password=p; DB.saveUsers(u); } }
+        function deleteUser(idx) { if(confirm('Delete?')) { const u=DB.getUsers(); u.splice(idx,1); DB.saveUsers(u); renderAdmin(); } }
+
+        // --- ADMIN: VIEW A DEVOTEE'S ENTRIES / JOURNAL (read-only) ---
+        function viewUserEntries(username) {
+            const user = DB.getUsers().find(u => u.username === username);
+            const logs = DB.getUserLogs(username).slice().sort((a,b) => new Date(b.date) - new Date(a.date));
+            document.getElementById('admin-view-title').innerText = `📋 ${fullName(user)} — Entries`;
+            const body = document.getElementById('admin-view-body');
+            if (logs.length === 0) {
+                body.innerHTML = `<p style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:1.5rem 0;">No entries logged yet.</p>`;
+            } else {
+                body.innerHTML = logs.map(log => `
+                    <div class="list-item">
+                        <div>
+                            <div style="font-weight:600">${log.date}</div>
+                            <div style="font-size:0.8rem; color:var(--text-muted)">${log.rounds} Rds | ${log.reading}m Read | ${log.lecture}m Lecture | ${log.service}m Service</div>
+                        </div>
+                        <span class="score-badge">${log.score}</span>
+                    </div>`).join('');
+            }
+            document.getElementById('admin-view-modal').classList.remove('hidden');
+        }
+
+        function viewUserJournal(username) {
+            const user = DB.getUsers().find(u => u.username === username);
+            const entries = DB.getUserJournal(username).slice().sort((a,b) => new Date(b.date) - new Date(a.date));
+            document.getElementById('admin-view-title').innerText = `📔 ${fullName(user)} — Journal`;
+            const body = document.getElementById('admin-view-body');
+            if (entries.length === 0) {
+                body.innerHTML = `<p style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:1.5rem 0;">No journal entries yet.</p>`;
+            } else {
+                body.innerHTML = entries.map(j => `
+                    <div style="padding:0.8rem 0; border-bottom:1px solid var(--border);">
+                        <div style="font-weight:700; font-size:0.85rem; margin-bottom:4px;">${j.date}</div>
+                        <div style="font-size:0.85rem; color:var(--text-main); white-space:pre-wrap;">${(j.text || '').replace(/</g,'&lt;')}</div>
+                    </div>`).join('');
+            }
+            document.getElementById('admin-view-modal').classList.remove('hidden');
+        }
+
+        function closeAdminViewModal() {
+            document.getElementById('admin-view-modal').classList.add('hidden');
+        }
+
+
+        // Init
+        checkSession();
+
+    </script>
+</body>
+</html>
