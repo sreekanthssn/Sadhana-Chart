@@ -603,109 +603,104 @@
 
     <script>
         // --- IN-MEMORY STORAGE SHIM (artifact preview: no browser storage) ---
-        const memStorage = {
-            _data: {},
-            getItem(key) { return Object.prototype.hasOwnProperty.call(this._data, key) ? this._data[key] : null; },
-            setItem(key, val) { this._data[key] = val; },
-            removeItem(key) { delete this._data[key]; }
-        };
-
-        // --- MOCK DATABASE CLASS ---
-        class MockDB {
-            constructor() {
-                if (!memStorage.getItem('db_users')) {
-                    this.saveUsers([{ 
-                        username: 'admin108', 
-                        password: 'root108', 
-                        email: 'admin@varenium.com',
-                        firstName: 'Śrī', lastName: 'Admin',
-                        role: 'root', 
-                        avatar: 'https://ui-avatars.com/api/?name=Admin',
-                        themeMode: 'light',
-                        colorTheme: 'saffron',
-                        lastUserChange: 0
-                    }]);
-                }
-                if (!memStorage.getItem('db_logs')) this.saveLogs({});
-                if (!memStorage.getItem('db_journals')) this.saveJournals({});
+        // ============================================================
+        //  API CLIENT + IN-MEMORY CACHE
+        //  The page reads data synchronously from CACHE. Writes update
+        //  CACHE right away (so the screen updates instantly) and are
+        //  persisted to the backend in the background.
+        // ============================================================
+        async function api(path, method = 'GET', body) {
+            const opts = { method, headers: {} };
+            if (body !== undefined) {
+                opts.headers['Content-Type'] = 'application/json';
+                opts.body = JSON.stringify(body);
             }
-
-            getUsers() { return JSON.parse(memStorage.getItem('db_users')); }
-            saveUsers(u) { memStorage.setItem('db_users', JSON.stringify(u)); }
-            
-            getLogs() { return JSON.parse(memStorage.getItem('db_logs')); }
-            saveLogs(l) { memStorage.setItem('db_logs', JSON.stringify(l)); }
-
-            getJournals() { return JSON.parse(memStorage.getItem('db_journals')); }
-            saveJournals(j) { memStorage.setItem('db_journals', JSON.stringify(j)); }
-
-            addUser(firstName, lastName, username, password, email) {
-                const users = this.getUsers();
-                if (users.find(u => u.username === username)) return { success: false, msg: "Username taken" }; 
-                if (users.find(u => u.email === email)) return { success: false, msg: "Email already exists" };
-                
-                users.push({
-                    username, password, email, firstName, lastName, role: 'user', 
-                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName + ' ' + lastName)}`, 
-                    themeMode: 'light', colorTheme: 'saffron',
-                    lastUserChange: Date.now()
-                });
-                this.saveUsers(users);
-                return { success: true };
+            const res = await fetch(path, opts);
+            let data = null;
+            try { data = await res.json(); } catch (e) {}
+            if (!res.ok) {
+                throw new Error((data && data.error) ? data.error : ('Request failed (' + res.status + ')'));
             }
-
-            login(username, password) {
-                const user = this.getUsers().find(u => u.username === username && u.password === password);
-                if (user) {
-                    memStorage.setItem('db_session', JSON.stringify(user));
-                    return user;
-                }
-                return null;
-            }
-
-            // Updated to handle overwrite logic cleanly
-            addLog(username, logEntry) {
-                const allLogs = this.getLogs();
-                if (!allLogs[username]) allLogs[username] = [];
-                const idx = allLogs[username].findIndex(l => l.date === logEntry.date);
-                if(idx > -1) allLogs[username][idx] = logEntry;
-                else allLogs[username].push(logEntry);
-                this.saveLogs(allLogs);
-            }
-
-            deleteLog(username, date) {
-                const allLogs = this.getLogs();
-                if (!allLogs[username]) return;
-                allLogs[username] = allLogs[username].filter(l => l.date !== date);
-                this.saveLogs(allLogs);
-            }
-
-            getUserLogs(username) {
-                return this.getLogs()[username] || [];
-            }
-
-            addJournalEntry(username, entry) {
-                const allJournals = this.getJournals();
-                if (!allJournals[username]) allJournals[username] = [];
-                const idx = allJournals[username].findIndex(j => j.date === entry.date);
-                if (idx > -1) allJournals[username][idx] = entry;
-                else allJournals[username].push(entry);
-                this.saveJournals(allJournals);
-            }
-
-            deleteJournalEntry(username, date) {
-                const allJournals = this.getJournals();
-                if (!allJournals[username]) return;
-                allJournals[username] = allJournals[username].filter(j => j.date !== date);
-                this.saveJournals(allJournals);
-            }
-
-            getUserJournal(username) {
-                return this.getJournals()[username] || [];
-            }
+            return data;
         }
 
-        const DB = new MockDB();
+        const CACHE = { logs: [], journal: [], leaderboard: [], users: [] };
+        let PENDING_CHANGE = null;
+
+        // Fire a background write; if it fails, tell the user.
+        function persist(promise, label) {
+            promise.catch(err => {
+                console.error(err);
+                alert((label ? label + ': ' : '') + (err.message || 'Save failed'));
+            });
+        }
+
+        function refreshLeaderboardAndRender() {
+            return api('/api/leaderboard').then(d => {
+                CACHE.leaderboard = d || [];
+                if (CURRENT_USER && !document.getElementById('view-overview').classList.contains('hidden')) {
+                    updateDashboard();
+                }
+            }).catch(() => {});
+        }
+
+        // Load everything the app needs, right after login / session restore.
+        async function loadInitialData(user) {
+            const tasks = [
+                api('/api/logs').then(d => { CACHE.logs = d || []; }),
+                api('/api/journal').then(d => { CACHE.journal = d || []; }),
+                api('/api/leaderboard').then(d => { CACHE.leaderboard = d || []; })
+            ];
+            if (user.role === 'admin' || user.role === 'root') {
+                tasks.push(api('/api/admin/users').then(d => { CACHE.users = d || []; }));
+            }
+            await Promise.all(tasks);
+        }
+
+        // DB keeps the SAME method names the page already uses. Reads are
+        // synchronous (from CACHE); writes are optimistic + persisted.
+        const DB = {
+            getUserLogs() { return CACHE.logs; },
+            getUserJournal() { return CACHE.journal; },
+            getUsers() { return CACHE.users; },
+
+            addLog(username, logEntry) {
+                const idx = CACHE.logs.findIndex(l => l.date === logEntry.date);
+                if (idx > -1) CACHE.logs[idx] = logEntry; else CACHE.logs.push(logEntry);
+                persist(
+                    api('/api/logs', 'POST', {
+                        date: logEntry.date, rounds: logEntry.rounds, reading: logEntry.reading,
+                        lecture: logEntry.lecture, service: logEntry.service
+                    }).then(saved => {
+                        const i2 = CACHE.logs.findIndex(l => l.date === saved.date);
+                        if (i2 > -1) CACHE.logs[i2] = saved;
+                        return refreshLeaderboardAndRender();
+                    }),
+                    'Could not save entry'
+                );
+            },
+            deleteLog(username, date) {
+                CACHE.logs = CACHE.logs.filter(l => l.date !== date);
+                persist(api('/api/logs/' + encodeURIComponent(date), 'DELETE').then(refreshLeaderboardAndRender), 'Could not delete entry');
+            },
+            clearLogs() {
+                CACHE.logs = [];
+                persist(api('/api/logs', 'DELETE').then(refreshLeaderboardAndRender), 'Could not clear logs');
+            },
+
+            addJournalEntry(username, entry) {
+                const idx = CACHE.journal.findIndex(j => j.date === entry.date);
+                if (idx > -1) CACHE.journal[idx] = entry; else CACHE.journal.push(entry);
+                persist(api('/api/journal', 'POST', { date: entry.date, text: entry.text }), 'Could not save reflection');
+            },
+            deleteJournalEntry(username, date) {
+                CACHE.journal = CACHE.journal.filter(j => j.date !== date);
+                persist(api('/api/journal/' + encodeURIComponent(date), 'DELETE'), 'Could not delete reflection');
+            },
+
+            updateProfile(fields) { return api('/api/me', 'PATCH', fields); },
+            async refreshUsers() { CACHE.users = await api('/api/admin/users') || []; return CACHE.users; }
+        };
         let CHART_STORE = {};
         let CURRENT_USER = null;
         let TEMP_CODE = null;
@@ -718,11 +713,13 @@
         }
 
         // --- AUTH LOGIC ---
-        function checkSession() {
-            const session = JSON.parse(memStorage.getItem('db_session'));
-            if (session) {
-                loadApp(session);
-            } else {
+        async function checkSession() {
+            try {
+                const user = await api('/api/me');
+                await loadInitialData(user);
+                document.getElementById('landing-page').classList.add('hidden');
+                loadApp(user);
+            } catch (e) {
                 document.getElementById('landing-page').classList.remove('hidden');
                 document.getElementById('app-interface').classList.add('hidden');
             }
@@ -749,14 +746,16 @@
                 return;
             }
 
-            const user = DB.login(u, p);
-            if(user) {
-                document.getElementById('landing-page').classList.add('hidden');
-                loadApp(user);
-            } else {
-                errEl.innerText = "Incorrect Username or Password. Please try again.";
-                errEl.style.display = 'block';
-            }
+            api('/api/login', 'POST', { username: u, password: p })
+                .then(async user => {
+                    await loadInitialData(user);
+                    document.getElementById('landing-page').classList.add('hidden');
+                    loadApp(user);
+                })
+                .catch(err => {
+                    errEl.innerText = err.message || "Incorrect Username or Password. Please try again.";
+                    errEl.style.display = 'block';
+                });
         }
 
         function authRegister() {
@@ -773,57 +772,54 @@
                 return;
             }
             
-            const res = DB.addUser(first, last, u, p, email);
-            if(res.success) {
-                const user = DB.login(u, p);
-                document.getElementById('landing-page').classList.add('hidden');
-                loadApp(user);
-            } else {
-                errEl.innerText = res.msg;
-                errEl.style.display = 'block';
-            }
+            api('/api/signup', 'POST', { firstName: first, lastName: last, username: u, password: p, email })
+                .then(async user => {
+                    await loadInitialData(user);
+                    document.getElementById('landing-page').classList.add('hidden');
+                    loadApp(user);
+                })
+                .catch(err => {
+                    errEl.innerText = err.message;
+                    errEl.style.display = 'block';
+                });
         }
 
         function sendResetCode() {
             const email = document.getElementById('f-email').value.trim();
             const errEl = document.getElementById('forgot-err');
-            const user = DB.getUsers().find(u => u.email === email);
-            if(user) {
-                TEMP_CODE = Math.floor(100000 + Math.random() * 900000);
-                alert(`[MOCK EMAIL]\nTo: ${email}\nReset Code: ${TEMP_CODE}`);
-                document.getElementById('forgot-step-1').classList.add('hidden');
-                document.getElementById('forgot-step-2').classList.remove('hidden');
-                errEl.style.display = 'none';
-            } else {
-                errEl.innerText = "Email not found.";
-                errEl.style.display = 'block';
-            }
+            if (!email) { errEl.innerText = "Enter your email."; errEl.style.display = 'block'; return; }
+            // The backend always responds the same way, so we don't reveal
+            // which emails are registered. Move to step 2 either way.
+            api('/api/forgot-password', 'POST', { email })
+                .then(() => {
+                    document.getElementById('forgot-step-1').classList.add('hidden');
+                    document.getElementById('forgot-step-2').classList.remove('hidden');
+                    errEl.style.display = 'none';
+                })
+                .catch(err => { errEl.innerText = err.message; errEl.style.display = 'block'; });
         }
 
         function confirmResetPass() {
-            const code = parseInt(document.getElementById('f-code').value);
+            const code = document.getElementById('f-code').value.trim();
             const newP = document.getElementById('f-newpass').value;
-            if(code === TEMP_CODE && newP) {
-                const email = document.getElementById('f-email').value;
-                const users = DB.getUsers();
-                const idx = users.findIndex(u => u.email === email);
-                users[idx].password = newP;
-                DB.saveUsers(users);
-                alert("Password reset successfully. Please login.");
-                document.getElementById('f-email').value = '';
-                document.getElementById('f-code').value = '';
-                document.getElementById('f-newpass').value = '';
-                document.getElementById('forgot-step-1').classList.remove('hidden');
-                document.getElementById('forgot-step-2').classList.add('hidden');
-                toggleAuth('login');
-            } else {
-                alert("Invalid Code or Password.");
-            }
+            const email = document.getElementById('f-email').value.trim();
+            api('/api/reset-password', 'POST', { email, code, newPassword: newP })
+                .then(() => {
+                    alert("Password reset successfully. Please login.");
+                    document.getElementById('f-email').value = '';
+                    document.getElementById('f-code').value = '';
+                    document.getElementById('f-newpass').value = '';
+                    document.getElementById('forgot-step-1').classList.remove('hidden');
+                    document.getElementById('forgot-step-2').classList.add('hidden');
+                    toggleAuth('login');
+                })
+                .catch(err => alert(err.message || "Invalid Code or Password."));
         }
 
         function logout() {
-            memStorage.removeItem('db_session');
+            api('/api/logout', 'POST').catch(() => {});
             CURRENT_USER = null;
+            CACHE.logs = []; CACHE.journal = []; CACHE.leaderboard = []; CACHE.users = [];
             document.getElementById('app-interface').classList.add('hidden');
             document.getElementById('landing-page').classList.remove('hidden');
             document.body.className = '';
@@ -1264,16 +1260,10 @@
                 (weeklyLogs.reduce((a,c)=>a+(c.service/60),0)/cnt)*100,
             ].map(x=>Math.min(100,x));
 
-            // 4. Global Leaderboard
-            const allLogs = DB.getLogs();
-            const allUsersForNames = DB.getUsers();
-            const lbData = Object.keys(allLogs).map(user => {
-                const uLogs = allLogs[user];
-                const wScore = uLogs.filter(l => { const d = new Date(l.date); return d >= weekStart; })
-                                    .reduce((acc, c) => acc + c.score, 0);
-                const uRecord = allUsersForNames.find(u => u.username === user);
-                return { user, displayName: fullName(uRecord) || user, score: wScore };
-            }).sort((a,b) => b.score - a.score);
+            // 4. Global Leaderboard (computed by the backend)
+            const lbData = CACHE.leaderboard
+                .map(d => ({ user: d.username, displayName: d.displayName, score: d.score }))
+                .sort((a,b) => b.score - a.score);
 
             const lbEl = document.getElementById('leaderboard-list');
             lbEl.innerHTML = '';
@@ -1590,18 +1580,19 @@
             CURRENT_USER.themeMode = mode;
             CURRENT_USER.colorTheme = color;
             document.body.className = `${mode === 'dark' ? 'dark-mode' : ''} theme-${color}`;
-            updateUserRecord();
+            persist(DB.updateProfile({ themeMode: mode, colorTheme: color }), 'Could not save theme');
             if(!document.getElementById('view-overview').classList.contains('hidden')) updateDashboard();
         }
 
         function uploadAvatar(e) {
             const file = e.target.files[0];
+            if (!file) return;
             const reader = new FileReader();
             reader.onload = function(evt) {
                 CURRENT_USER.avatar = evt.target.result;
-                updateUserRecord();
                 document.getElementById('user-avatar-img').src = CURRENT_USER.avatar;
                 document.getElementById('setting-avatar').src = CURRENT_USER.avatar;
+                persist(DB.updateProfile({ avatar: CURRENT_USER.avatar }), 'Could not save avatar');
             };
             reader.readAsDataURL(file);
         }
@@ -1611,100 +1602,62 @@
             const newEmail = document.getElementById('change-email-input').value.trim();
             const msgEl = document.getElementById('user-change-msg');
             msgEl.style.display = 'none';
+            msgEl.style.color = '#EF4444';
 
             if (!newU && !newEmail) {
-                msgEl.style.color = '#EF4444';
-                msgEl.innerText = "Enter a new username and/or email to change.";
+                msgEl.innerText = "Enter a new username or email to change.";
                 msgEl.style.display = 'block';
                 return;
             }
-
-            const users = DB.getUsers();
-
-            if (newU) {
-                const lastChange = CURRENT_USER.lastUserChange || 0;
-                const diffHours = (Date.now() - lastChange) / (1000 * 60 * 60);
-                if (diffHours < 108) {
-                    const remaining = Math.ceil(108 - diffHours);
-                    msgEl.style.color = '#EF4444';
-                    msgEl.innerText = `Please wait ${remaining} more hours to change username.`;
-                    msgEl.style.display = 'block';
-                    return;
-                }
-                if (newU !== CURRENT_USER.username && users.find(u => u.username === newU)) {
-                    msgEl.style.color = '#EF4444';
-                    msgEl.innerText = "Username taken.";
-                    msgEl.style.display = 'block';
-                    return;
-                }
-                CURRENT_USER.tempNewUsername = newU;
+            if (newU && newEmail) {
+                msgEl.innerText = "Please change your username and email one at a time.";
+                msgEl.style.display = 'block';
+                return;
             }
-
-            if (newEmail) {
-                if (!newEmail.includes('@')) {
-                    msgEl.style.color = '#EF4444';
-                    msgEl.innerText = "Enter a valid email address.";
-                    msgEl.style.display = 'block';
-                    return;
-                }
-                if (newEmail !== CURRENT_USER.email && users.find(u => u.email === newEmail)) {
-                    msgEl.style.color = '#EF4444';
-                    msgEl.innerText = "Email already in use.";
-                    msgEl.style.display = 'block';
-                    return;
-                }
-                CURRENT_USER.tempNewEmail = newEmail;
+            const type = newU ? 'username' : 'email';
+            const newValue = newU || newEmail;
+            if (type === 'email' && !newValue.includes('@')) {
+                msgEl.innerText = "Enter a valid email address.";
+                msgEl.style.display = 'block';
+                return;
             }
-
-            TEMP_CODE = Math.floor(100000 + Math.random() * 900000);
-            const sendTo = CURRENT_USER.tempNewEmail || CURRENT_USER.email;
-            alert(`[MOCK EMAIL SERVICE]\nTo: ${sendTo}\nYour Verification Code: ${TEMP_CODE}`);
-            document.getElementById('sec-step-1').classList.add('hidden');
-            document.getElementById('sec-step-2').classList.remove('hidden');
+            // A verification code is sent to the email on file, then applied on confirm.
+            api('/api/me/request-change', 'POST', { type, newValue })
+                .then(() => {
+                    PENDING_CHANGE = { type, newValue };
+                    document.getElementById('sec-step-1').classList.add('hidden');
+                    document.getElementById('sec-step-2').classList.remove('hidden');
+                })
+                .catch(err => { msgEl.innerText = err.message; msgEl.style.display = 'block'; });
         }
 
         function verifyAndSave() {
-            const inputCode = parseInt(document.getElementById('sec-code').value);
-            if(inputCode === TEMP_CODE) {
-                const originalUsername = CURRENT_USER.username;
-                if(CURRENT_USER.tempNewUsername) {
-                    CURRENT_USER.username = CURRENT_USER.tempNewUsername;
-                    CURRENT_USER.lastUserChange = Date.now();
-                    delete CURRENT_USER.tempNewUsername;
-                }
-                if(CURRENT_USER.tempNewEmail) {
-                    CURRENT_USER.email = CURRENT_USER.tempNewEmail;
-                    delete CURRENT_USER.tempNewEmail;
-                }
-                updateUserRecord(originalUsername);
-                alert("Profile Updated Successfully!");
-                cancelSecurity();
-                document.getElementById('change-user-input').value = '';
-                document.getElementById('change-email-input').value = '';
-                document.getElementById('user-change-msg').style.display = 'none';
-                updateAccountInfoBlock();
-            } else {
-                alert("Incorrect Code.");
-            }
+            const inputCode = document.getElementById('sec-code').value.trim();
+            if (!PENDING_CHANGE) { alert("Nothing to verify."); return; }
+            api('/api/me/confirm-change', 'POST', {
+                type: PENDING_CHANGE.type, newValue: PENDING_CHANGE.newValue, code: inputCode
+            })
+                .then(updated => {
+                    CURRENT_USER = updated;
+                    alert("Profile Updated Successfully!");
+                    cancelSecurity();
+                    document.getElementById('change-user-input').value = '';
+                    document.getElementById('change-email-input').value = '';
+                    document.getElementById('user-change-msg').style.display = 'none';
+                    updateAccountInfoBlock();
+                })
+                .catch(err => alert(err.message || "Incorrect Code."));
         }
 
         function cancelSecurity() {
             document.getElementById('sec-step-1').classList.remove('hidden');
             document.getElementById('sec-step-2').classList.add('hidden');
             document.getElementById('sec-code').value = '';
-            delete CURRENT_USER.tempNewUsername;
-            delete CURRENT_USER.tempNewEmail;
+            PENDING_CHANGE = null;
             TEMP_CODE = null;
         }
 
-        function updateUserRecord(lookupUsername) {
-            const key = lookupUsername || CURRENT_USER.username;
-            const allUsers = DB.getUsers();
-            const idx = allUsers.findIndex(u => u.username === key);
-            if(idx > -1) allUsers[idx] = CURRENT_USER;
-            DB.saveUsers(allUsers);
-            memStorage.setItem('db_session', JSON.stringify(CURRENT_USER));
-        }
+        function updateUserRecord() { /* persistence is now handled by the backend */ }
 
         function updateAccountInfoBlock() {
             document.getElementById('acct-info-name').innerText = fullName(CURRENT_USER);
@@ -1714,9 +1667,7 @@
 
         function clearLogs() {
             if(confirm("Are you sure? This cannot be undone.")) {
-                const allLogs = DB.getLogs();
-                allLogs[CURRENT_USER.username] = [];
-                DB.saveLogs(allLogs);
+                DB.clearLogs();
                 updateDashboard();
             }
         }
@@ -1749,24 +1700,46 @@
                 actions += `<button onclick="viewUserJournal('${u.username}')" style="color:#7C3AED;margin-right:5px;border:none;background:none;font-size:0.8rem;">Journal</button>`;
 
                 if(canManage && u.username !== CURRENT_USER.username) {
-                    if(u.role === 'user' && adminCount < 19) actions += `<button onclick="promoteUser(${i})" style="color:blue;margin-right:5px;border:none;background:none;font-size:0.8rem;">Promote</button>`;
-                    if(u.role === 'admin' && CURRENT_USER.role === 'root') actions += `<button onclick="demoteUser(${i})" style="color:orange;margin-right:5px;border:none;background:none;font-size:0.8rem;">Demote</button>`;
-                    actions += `<button onclick="resetPass(${i})" style="color:green;margin-right:5px;border:none;background:none;font-size:0.8rem;">Reset PW</button>`;
-                    actions += `<button onclick="deleteUser(${i})" style="color:red;border:none;background:none;font-size:0.8rem;">Delete</button>`;
+                    if(u.role === 'user' && adminCount < 19) actions += `<button onclick="promoteUser(${u.id})" style="color:blue;margin-right:5px;border:none;background:none;font-size:0.8rem;">Promote</button>`;
+                    if(u.role === 'admin' && CURRENT_USER.role === 'root') actions += `<button onclick="demoteUser(${u.id})" style="color:orange;margin-right:5px;border:none;background:none;font-size:0.8rem;">Demote</button>`;
+                    actions += `<button onclick="resetPass(${u.id})" style="color:green;margin-right:5px;border:none;background:none;font-size:0.8rem;">Reset PW</button>`;
+                    actions += `<button onclick="deleteUser(${u.id})" style="color:red;border:none;background:none;font-size:0.8rem;">Delete</button>`;
                 }
                 tbody.innerHTML += `<tr><td><div style="display:flex;align-items:center;gap:10px;"><img src="${u.avatar}" style="width:30px;height:30px;border-radius:50%"> <div><div style="font-weight:700;">${fullName(u)}</div><div style="font-size:0.72rem;color:var(--text-muted);">@${u.username}</div></div></div></td><td>${u.email||'-'}</td><td><span class="badge ${badge}">${roleTxt}</span></td><td>${actions}</td></tr>`;
             });
         }
 
-        function promoteUser(idx) { DB.getUsers()[idx].role = 'admin'; DB.saveUsers(DB.getUsers()); renderAdmin(); }
-        function demoteUser(idx) { DB.getUsers()[idx].role = 'user'; DB.saveUsers(DB.getUsers()); renderAdmin(); }
-        function resetPass(idx) { const p = prompt("New Pass"); if(p) { const u=DB.getUsers(); u[idx].password=p; DB.saveUsers(u); } }
-        function deleteUser(idx) { if(confirm('Delete?')) { const u=DB.getUsers(); u.splice(idx,1); DB.saveUsers(u); renderAdmin(); } }
+        function promoteUser(id) {
+            api('/api/admin/users/' + id + '/promote', 'POST')
+                .then(() => DB.refreshUsers()).then(renderAdmin)
+                .catch(err => alert(err.message));
+        }
+        function demoteUser(id) {
+            api('/api/admin/users/' + id + '/demote', 'POST')
+                .then(() => DB.refreshUsers()).then(renderAdmin)
+                .catch(err => alert(err.message));
+        }
+        function resetPass(id) {
+            const p = prompt("New password (at least 8 characters)");
+            if (!p) return;
+            api('/api/admin/users/' + id + '/reset-password', 'POST', { newPassword: p })
+                .then(() => alert("Password reset."))
+                .catch(err => alert(err.message));
+        }
+        function deleteUser(id) {
+            if (!confirm('Delete this user? This cannot be undone.')) return;
+            api('/api/admin/users/' + id, 'DELETE')
+                .then(() => DB.refreshUsers()).then(renderAdmin)
+                .catch(err => alert(err.message));
+        }
 
         // --- ADMIN: VIEW A DEVOTEE'S ENTRIES / JOURNAL (read-only) ---
-        function viewUserEntries(username) {
-            const user = DB.getUsers().find(u => u.username === username);
-            const logs = DB.getUserLogs(username).slice().sort((a,b) => new Date(b.date) - new Date(a.date));
+        async function viewUserEntries(username) {
+            const user = CACHE.users.find(u => u.username === username);
+            let logs = [];
+            try { logs = await api('/api/admin/users/' + encodeURIComponent(username) + '/logs'); }
+            catch (err) { alert(err.message); return; }
+            logs.sort((a,b) => new Date(b.date) - new Date(a.date));
             document.getElementById('admin-view-title').innerText = `📋 ${fullName(user)} — Entries`;
             const body = document.getElementById('admin-view-body');
             if (logs.length === 0) {
@@ -1784,9 +1757,12 @@
             document.getElementById('admin-view-modal').classList.remove('hidden');
         }
 
-        function viewUserJournal(username) {
-            const user = DB.getUsers().find(u => u.username === username);
-            const entries = DB.getUserJournal(username).slice().sort((a,b) => new Date(b.date) - new Date(a.date));
+        async function viewUserJournal(username) {
+            const user = CACHE.users.find(u => u.username === username);
+            let entries = [];
+            try { entries = await api('/api/admin/users/' + encodeURIComponent(username) + '/journal'); }
+            catch (err) { alert(err.message); return; }
+            entries.sort((a,b) => new Date(b.date) - new Date(a.date));
             document.getElementById('admin-view-title').innerText = `📔 ${fullName(user)} — Journal`;
             const body = document.getElementById('admin-view-body');
             if (entries.length === 0) {
