@@ -119,14 +119,28 @@ function canManage(actor, target) {
 }
 
 // The score is computed on the SERVER so a user can't submit a fake one.
-// (Same formula as the original page.)
-function computeScore(rounds, reading, lecture, service) {
-  const score = Math.round(
-    (Math.min(rounds, 16) * 2.5) +
-    (Math.min(reading, 60) / 3) +
-    (Math.min(lecture, 60) / 3) +
-    (Math.min(service, 60) / 3)
-  );
+// Chanting: earliest rounds are worth the most. Count the earliest first,
+// up to a 16-round cap. 16 rounds before 7am = 40, the chanting maximum.
+function chantingPoints(early, mid, late) {
+  // Earlier rounds are worth more. 16 rounds before 7am = the full 25.
+  // 16 rounds 7-9am = 20; 16 rounds after 9am = 15. Earliest counted first, 16-round cap.
+  let remaining = 16, pts = 0;
+  const e = Math.min(early, remaining); pts += e * (25 / 16); remaining -= e;
+  const m = Math.min(mid, remaining);   pts += m * (20 / 16); remaining -= m;
+  const l = Math.min(late, remaining);  pts += l * (15 / 16);
+  return Math.min(pts, 25);
+}
+
+// Reading / lecture / service: minute-by-minute, full marks at 60 minutes.
+// Reading tops out at 30, lecture and service at 15 each.
+function computeScore(early, mid, late, reading, lecture, service) {
+  const raw =
+    chantingPoints(early, mid, late) +           // Japa, max 25
+    Math.min(reading * (30 / 60), 30) +          // Reading, max 30, full at 60 min
+    Math.min(lecture * (30 / 60), 30) +          // Lecture, max 30, full at 60 min
+    Math.min(service * (15 / 60), 15);           // Seva, max 15, full at 60 min
+  let score = Math.round(raw);
+  if (raw > 0 && score === 0) score = 1;   // any real effort scores at least 1
   return Math.min(score, 100);
 }
 
@@ -168,6 +182,9 @@ function shapeLog(r) {
   return {
     date: r.date,
     rounds: Number(r.rounds),
+    roundsEarly: Number(r.rounds_early),
+    roundsMid: Number(r.rounds_mid),
+    roundsLate: Number(r.rounds_late),
     reading: Number(r.reading),
     lecture: Number(r.lecture),
     service: Number(r.service),
@@ -279,7 +296,7 @@ app.post('/api/reset-password', async (req, res) => {
 // ============================================================
 app.get('/api/logs', requireAuth, async (req, res) => {
   const { rows } = await pool.query(
-    `SELECT to_char(log_date, 'YYYY-MM-DD') AS date, rounds, reading, lecture, service, score
+    `SELECT to_char(log_date, 'YYYY-MM-DD') AS date, rounds, rounds_early, rounds_mid, rounds_late, reading, lecture, service, score
      FROM logs WHERE user_id = $1 ORDER BY log_date DESC`,
     [req.session.userId]
   );
@@ -288,15 +305,18 @@ app.get('/api/logs', requireAuth, async (req, res) => {
 
 app.post('/api/logs', requireAuth, async (req, res) => {
   try {
-    const { date, rounds = 0, reading = 0, lecture = 0, service = 0 } = req.body;
+    const { date, roundsEarly = 0, roundsMid = 0, roundsLate = 0, reading = 0, lecture = 0, service = 0 } = req.body;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) {
       return res.status(400).json({ error: 'A valid date (YYYY-MM-DD) is required' });
     }
-    const r = Math.max(0, Number(rounds) || 0);
+    const re = Math.max(0, Number(roundsEarly) || 0);
+    const rm = Math.max(0, Number(roundsMid) || 0);
+    const rl = Math.max(0, Number(roundsLate) || 0);
+    const r = re + rm + rl;
     const rd = Math.max(0, Number(reading) || 0);
     const l = Math.max(0, Number(lecture) || 0);
     const s = Math.max(0, Number(service) || 0);
-    const score = computeScore(r, rd, l, s);
+    const score = computeScore(re, rm, rl, rd, l, s);
 
     // Server-side "history locked": block edits to an existing entry from a past week.
     const existing = await pool.query(
@@ -309,12 +329,12 @@ app.post('/api/logs', requireAuth, async (req, res) => {
     }
 
     const { rows } = await pool.query(
-      `INSERT INTO logs (user_id, log_date, rounds, reading, lecture, service, score)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO logs (user_id, log_date, rounds, rounds_early, rounds_mid, rounds_late, reading, lecture, service, score)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        ON CONFLICT (user_id, log_date)
-       DO UPDATE SET rounds = $3, reading = $4, lecture = $5, service = $6, score = $7, updated_at = now()
-       RETURNING to_char(log_date, 'YYYY-MM-DD') AS date, rounds, reading, lecture, service, score`,
-      [req.session.userId, date, r, rd, l, s, score]
+       DO UPDATE SET rounds = $3, rounds_early = $4, rounds_mid = $5, rounds_late = $6, reading = $7, lecture = $8, service = $9, score = $10, updated_at = now()
+       RETURNING to_char(log_date, 'YYYY-MM-DD') AS date, rounds, rounds_early, rounds_mid, rounds_late, reading, lecture, service, score`,
+      [req.session.userId, date, r, re, rm, rl, rd, l, s, score]
     );
     res.json(shapeLog(rows[0]));
   } catch (err) {
@@ -383,6 +403,47 @@ app.get('/api/leaderboard', requireAuth, async (req, res) => {
     [weekStart]
   );
   res.json(rows);
+});
+
+// ============================================================
+//  ADMIN REPORTS  (weekly top 10, monthly, yearly leaderboards)
+//  Admin-only. Each board is a live aggregation of daily scores
+//  within the current week / month / year, so it "resets" on its own.
+// ============================================================
+app.get('/api/admin/reports', requireAdmin, async (req, res) => {
+  const nameExpr = `COALESCE(NULLIF(TRIM(COALESCE(u.first_name,'') || ' ' || COALESCE(u.last_name,'')), ''), u.username)`;
+
+  async function board(whereDate, params, limit) {
+    const lim = limit ? `LIMIT ${limit}` : '';
+    const { rows } = await pool.query(
+      `SELECT u.username, ${nameExpr} AS "displayName", COALESCE(SUM(l.score), 0)::int AS score
+       FROM users u
+       JOIN logs l ON l.user_id = u.id AND ${whereDate}
+       GROUP BY u.id
+       HAVING COALESCE(SUM(l.score), 0) > 0
+       ORDER BY score DESC, "displayName" ASC
+       ${lim}`,
+      params
+    );
+    return rows;
+  }
+
+  const weekStart = getWeekStartUTC().toISOString().slice(0, 10);
+  const weekly  = await board(`l.log_date >= $1`, [weekStart], 10);
+  const monthly = await board(
+    `l.log_date >= date_trunc('month', CURRENT_DATE) AND l.log_date < date_trunc('month', CURRENT_DATE) + interval '1 month'`, [], null);
+  const yearly  = await board(
+    `l.log_date >= date_trunc('year', CURRENT_DATE)  AND l.log_date < date_trunc('year', CURRENT_DATE)  + interval '1 year'`, [], null);
+
+  const now = new Date();
+  const monthLabel = now.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' }) + ' ' + now.getUTCFullYear();
+  const yearLabel = String(now.getUTCFullYear());
+
+  res.json({
+    weekly,
+    monthly: { label: monthLabel, rows: monthly },
+    yearly:  { label: yearLabel,  rows: yearly }
+  });
 });
 
 // ============================================================
@@ -529,7 +590,7 @@ app.get('/api/admin/users/:username/logs', requireAdmin, async (req, res) => {
   const u = await pool.query('SELECT id FROM users WHERE username = $1', [req.params.username]);
   if (!u.rows.length) return res.status(404).json({ error: 'User not found' });
   const { rows } = await pool.query(
-    `SELECT to_char(log_date, 'YYYY-MM-DD') AS date, rounds, reading, lecture, service, score
+    `SELECT to_char(log_date, 'YYYY-MM-DD') AS date, rounds, rounds_early, rounds_mid, rounds_late, reading, lecture, service, score
      FROM logs WHERE user_id = $1 ORDER BY log_date DESC`,
     [u.rows[0].id]
   );

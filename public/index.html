@@ -116,61 +116,113 @@
         }
         .log-entry-dropdown.open { display: block; }
 
-        /* --- ROTATING WHEEL DATE MODAL --- */
-        #date-picker-modal, #admin-view-modal, #month-grid-modal {
+        /* --- MODAL OVERLAYS --- */
+        #date-picker-modal, #admin-view-modal {
             position: fixed; inset: 0; z-index: 3000;
-            background: rgba(0,0,0,0.55);
+            background: rgba(0,0,0,0.4);
             display: flex; align-items: center; justify-content: center; padding: 1rem;
         }
-        #month-grid-modal { z-index: 3200; }
         .wheel-picker-card {
             background: var(--bg-card); border-radius: 20px; padding: 1.6rem 1.25rem 1.4rem;
             width: 300px; max-width: 92vw; box-shadow: var(--shadow); text-align: center;
             border: 1px solid var(--border);
         }
         .wheel-picker-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--text-main); margin-bottom: 0.2rem; }
-        .wheel-picker-sub { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 1px; }
-
-        .wheel-today-btn {
-            display: inline-flex; align-items: center; gap: 6px; margin: 0 auto 0.75rem;
-            background: none; border: 1px solid var(--border); color: var(--text-muted);
-            font-size: 0.75rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; transition: 0.2s;
-        }
-        .wheel-today-btn:hover { color: var(--primary); border-color: var(--primary); }
         .wheel-actions { display: flex; gap: 10px; margin-top: 1.25rem; }
 
-        /* --- MONTH GRID PICKER (12 fixed boxes, no keyboard) --- */
-        .grid-popup-card {
-            background: var(--bg-card); border-radius: 16px; padding: 1.25rem;
-            width: 280px; max-width: 90vw; box-shadow: var(--shadow);
-            border: 1px solid var(--border); text-align: center;
+        /* --- APPLE-STYLE DATE PICKER (iOS wheel, per Human Interface Guidelines) --- */
+        :root {
+            --ios-fill: rgba(118, 118, 128, 0.12);
+            --ios-separator: rgba(60, 60, 67, 0.18);
+            --ios-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Inter, sans-serif;
         }
-        .grid-popup-title { font-weight: 700; color: var(--text-main); margin-bottom: 0.85rem; font-size: 0.95rem; }
-        .grid-popup-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        .grid-popup-cell {
-            padding: 0.7rem 0; border-radius: 8px; border: 1px solid var(--border);
-            background: var(--bg-body); color: var(--text-main); font-weight: 700;
-            font-size: 0.85rem; cursor: pointer; transition: 0.15s;
+        body.dark-mode {
+            --ios-fill: rgba(118, 118, 128, 0.24);
+            --ios-separator: rgba(84, 84, 88, 0.6);
         }
-        .grid-popup-cell:hover { border-color: var(--primary); color: var(--primary); }
-        .grid-popup-cell.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        #date-picker-modal {
+            -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+            animation: iosFade 0.2s ease-out;
+        }
+        .ios-sheet {
+            width: 340px; max-width: calc(100vw - 32px);
+            background: var(--bg-card); color: var(--text-main);
+            border-radius: 14px; overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+            font-family: var(--ios-font);
+            animation: iosSheetIn 0.32s cubic-bezier(0.2, 0.9, 0.3, 1);
+        }
+        .ios-sheet-bar {
+            display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+            padding: 12px 16px; border-bottom: 1px solid var(--ios-separator);
+        }
+        .ios-bar-btn {
+            background: none; border: none; font-family: var(--ios-font);
+            font-size: 17px; color: var(--primary); padding: 6px 0; min-height: 44px;
+        }
+        .ios-bar-btn:active { opacity: 0.4; }
+        .ios-bar-btn.cancel { justify-self: start; font-weight: 400; }
+        .ios-bar-btn.done { justify-self: end; font-weight: 600; }
+        .ios-sheet-title { font-size: 17px; font-weight: 600; letter-spacing: -0.4px; }
+        .ios-sheet-summary {
+            text-align: center; font-size: 13px; color: var(--text-muted);
+            padding: 12px 16px 0; letter-spacing: -0.08px; min-height: 28px;
+        }
 
-        /* --- DATE COLUMNS (static value, tap to type — no drag/scroll) --- */
-        .wheel-row { position: relative; display: flex; justify-content: center; align-items: center; height: 140px; }
-        .wheel-col {
-            position: relative; width: 33.33%; height: 100%;
-            display: flex; align-items: center; justify-content: center;
-            user-select: none;
+        .ios-wheel-row {
+            position: relative; display: grid; grid-template-columns: 0.8fr 1.6fr 1fr;
+            height: 216px; margin: 6px 12px 4px;
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 32%, #000 68%, transparent 100%);
+                    mask-image: linear-gradient(to bottom, transparent 0%, #000 32%, #000 68%, transparent 100%);
         }
-        .wheel-item {
-            width: 100%; text-align: center; cursor: pointer;
-            font-weight: 800; font-size: 1.85rem; color: var(--text-main);
+        .ios-wheel-highlight {
+            position: absolute; left: 0; right: 0; top: 50%; height: 36px;
+            transform: translateY(-50%); background: var(--ios-fill);
+            border-radius: 8px; pointer-events: none;
         }
-        .wheel-manual-input {
-            width: 100%;
-            text-align: center; border: none; outline: none; background: transparent;
-            font-weight: 800; font-size: 1.85rem; color: var(--primary); font-family: inherit;
+        .ios-wheel {
+            position: relative; height: 100%;
+            overflow-y: scroll; scroll-snap-type: y mandatory; overscroll-behavior: contain;
+            scrollbar-width: none; -webkit-overflow-scrolling: touch;
+            perspective: 500px; outline: none; cursor: grab; touch-action: pan-y;
+            border-radius: 8px;
         }
+        .ios-wheel::-webkit-scrollbar { display: none; }
+        .ios-wheel.dragging { cursor: grabbing; }
+        .ios-wheel:focus-visible { box-shadow: inset 0 0 0 2px var(--primary); }
+        .ios-wheel-track { padding: 90px 0; }
+        .ios-wheel-item {
+            height: 36px; line-height: 36px; scroll-snap-align: center;
+            text-align: center; font-size: 21px; font-weight: 400; letter-spacing: -0.4px;
+            color: var(--text-main); font-variant-numeric: tabular-nums;
+            white-space: nowrap; user-select: none; -webkit-user-select: none;
+            cursor: pointer; will-change: transform, opacity;
+        }
+        .ios-sheet-footer { display: flex; justify-content: center; padding: 6px 16px 16px; }
+        .ios-today-btn {
+            font-family: var(--ios-font); font-size: 15px; font-weight: 500;
+            color: var(--primary); background: var(--ios-fill);
+            border: none; border-radius: 999px; padding: 7px 16px; min-height: 34px;
+        }
+        .ios-today-btn:active { opacity: 0.5; }
+
+        @keyframes iosFade { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes iosSheetIn { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: none; } }
+        @keyframes iosSheetUp { from { transform: translateY(100%); } to { transform: none; } }
+
+        /* On phones it becomes a bottom sheet, like iOS */
+        @media (max-width: 600px) {
+            #date-picker-modal { align-items: flex-end; padding: 0; }
+            .ios-sheet {
+                width: 100%; max-width: 100%; border-radius: 14px 14px 0 0;
+                padding-bottom: env(safe-area-inset-bottom);
+                animation: iosSheetUp 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #date-picker-modal, .ios-sheet { animation: none; }
+        }
+
         /* --- INPUTS --- */
         .form-group { margin-bottom: 1rem; }
         label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.4rem; text-transform: uppercase; }
@@ -320,20 +372,28 @@
                                         </button>
 
                                         <div class="form-group">
-                                            <label>Chanting (Rounds / 16)</label>
-                                            <input type="number" id="e-rounds" class="input-std" placeholder="Target: 16" required>
+                                            <label>Chanting — before 7am (rounds)</label>
+                                            <input type="number" id="e-rounds-early" class="input-std" placeholder="Rounds before 7am" min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Chanting — 7 to 9am (rounds)</label>
+                                            <input type="number" id="e-rounds-mid" class="input-std" placeholder="Rounds 7–9am" min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Chanting — after 9am (rounds)</label>
+                                            <input type="number" id="e-rounds-late" class="input-std" placeholder="Rounds after 9am" min="0">
                                         </div>
                                         <div class="form-group">
                                             <label>Reading (Mins / 60)</label>
-                                            <input type="number" id="e-read" class="input-std" placeholder="Target: 60">
+                                            <input type="number" id="e-read" class="input-std" placeholder="Minutes read" min="0">
                                         </div>
                                         <div class="form-group">
                                             <label>Lecture (Mins / 60)</label>
-                                            <input type="number" id="e-lec" class="input-std" placeholder="Target: 60">
+                                            <input type="number" id="e-lec" class="input-std" placeholder="Minutes of lecture" min="0">
                                         </div>
                                         <div class="form-group">
                                             <label>Service (Mins / 60)</label>
-                                            <input type="number" id="e-seva" class="input-std" placeholder="Target: 60">
+                                            <input type="number" id="e-seva" class="input-std" placeholder="Minutes of service" min="0">
                                         </div>
                                         <button type="submit" class="btn-primary">Enter</button>
                                     </form>
@@ -555,38 +615,51 @@
                             </table>
                         </div>
                     </div>
+                    <div class="card">
+                        <h2>Reports</h2>
+                        <div style="overflow-x:auto;">
+                            <h3 style="margin:0.5rem 0;" id="rep-weekly-title">Top 10 This Week</h3>
+                            <table class="admin-table">
+                                <thead><tr><th>#</th><th>Devotee</th><th>Score</th></tr></thead>
+                                <tbody id="rep-weekly"></tbody>
+                            </table>
+                            <h3 style="margin:1.25rem 0 0.5rem;" id="rep-monthly-title">This Month</h3>
+                            <table class="admin-table">
+                                <thead><tr><th>#</th><th>Devotee</th><th>Score</th></tr></thead>
+                                <tbody id="rep-monthly"></tbody>
+                            </table>
+                            <h3 style="margin:1.25rem 0 0.5rem;" id="rep-yearly-title">This Year</h3>
+                            <table class="admin-table">
+                                <thead><tr><th>#</th><th>Devotee</th><th>Score</th></tr></thead>
+                                <tbody id="rep-yearly"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
             </div>
         </main>
 
-        <div id="date-picker-modal" class="hidden">
-            <div class="wheel-picker-card">
-                <div class="wheel-picker-title">Select Date</div>
-                <div class="wheel-picker-sub">Tap a number to type it in</div>
-
-                <button type="button" class="wheel-today-btn" onclick="jumpToToday()">
-                    <span aria-hidden="true">◎</span> Jump to Today
-                </button>
-
-                <div class="wheel-row">
-                    <div class="wheel-col" id="wheel-col-day"></div>
-                    <div class="wheel-col" id="wheel-col-month"></div>
-                    <div class="wheel-col" id="wheel-col-year"></div>
+        <div id="date-picker-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="ios-picker-title">
+            <div class="ios-sheet">
+                <div class="ios-sheet-bar">
+                    <button type="button" class="ios-bar-btn cancel" onclick="closeDatePicker()">Cancel</button>
+                    <div class="ios-sheet-title" id="ios-picker-title">Date</div>
+                    <button type="button" class="ios-bar-btn done" onclick="confirmDatePicker()">Done</button>
                 </div>
 
-                <div class="wheel-actions">
-                    <button type="button" class="btn-outline" onclick="closeDatePicker()">Cancel</button>
-                    <button type="button" class="btn-primary" onclick="confirmDatePicker()">Confirm</button>
-                </div>
-            </div>
-        </div>
+                <div class="ios-sheet-summary" id="ios-picker-summary" aria-live="polite"></div>
 
-        <div id="month-grid-modal" class="hidden">
-            <div class="grid-popup-card">
-                <div class="grid-popup-title">Select Month</div>
-                <div class="grid-popup-grid" id="month-grid-grid"></div>
-                <button type="button" class="btn-outline" style="margin-top: 1rem;" onclick="closeMonthGridPicker()">Cancel</button>
+                <div class="ios-wheel-row">
+                    <div class="ios-wheel-highlight" aria-hidden="true"></div>
+                    <div class="ios-wheel" id="wheel-col-day"></div>
+                    <div class="ios-wheel" id="wheel-col-month"></div>
+                    <div class="ios-wheel" id="wheel-col-year"></div>
+                </div>
+
+                <div class="ios-sheet-footer">
+                    <button type="button" class="ios-today-btn" onclick="jumpToToday()">Today</button>
+                </div>
             </div>
         </div>
 
@@ -669,8 +742,9 @@
                 if (idx > -1) CACHE.logs[idx] = logEntry; else CACHE.logs.push(logEntry);
                 persist(
                     api('/api/logs', 'POST', {
-                        date: logEntry.date, rounds: logEntry.rounds, reading: logEntry.reading,
-                        lecture: logEntry.lecture, service: logEntry.service
+                        date: logEntry.date,
+                        roundsEarly: logEntry.roundsEarly, roundsMid: logEntry.roundsMid, roundsLate: logEntry.roundsLate,
+                        reading: logEntry.reading, lecture: logEntry.lecture, service: logEntry.service
                     }).then(saved => {
                         const i2 = CACHE.logs.findIndex(l => l.date === saved.date);
                         if (i2 > -1) CACHE.logs[i2] = saved;
@@ -854,12 +928,12 @@
             });
             document.getElementById('view-'+viewId).classList.remove('hidden');
             if(viewId === 'stats') renderStats();
-            if(viewId === 'admin') renderAdmin();
+            if(viewId === 'admin') { renderAdmin(); loadReports(); }
             if(viewId === 'overview') updateDashboard();
             if(viewId === 'journals') renderJournals();
         }
 
-        // --- ROTATING WHEEL DATE PICKER LOGIC (shared by Log Entry & Journals) ---
+        // --- APPLE-STYLE DATE PICKER LOGIC (shared by Log Entry & Journals) ---
         const MONTH_ABBR = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
 
         let committedDate = null;   // { year, month(0-11), day } -- Log Entry's last confirmed value
@@ -904,93 +978,149 @@
             return `${y}-${mStr}-${dStr}`;
         }
 
-        // --- Generic vertical drum wheel column (Android-picker style) ---
-        function makeWheelColumn(el, values, startIndex, onSettle, pickerConfig) {
-            let vals = values;
-            let currentIndex = startIndex;
+        // --- Apple-style picker wheel (iOS UIDatePicker "wheels" look & feel) ---
+        // Native scrolling with snap points, a 3D drum effect, tap-a-row to select,
+        // mouse drag with momentum on desktop, and full keyboard support.
+        const MONTH_FULL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+        const WHEEL_ITEM_H = 36;
+        const PREFERS_REDUCED_MOTION = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-            function render() {
-                el.innerHTML = '';
-                const item = document.createElement('div');
-                item.className = 'wheel-item center';
-                item.textContent = vals[currentIndex];
-                item.addEventListener('click', () => {
-                    if (!pickerConfig) return;
-                    if (pickerConfig.type === 'grid') {
-                        pickerConfig.openGrid(currentIndex, (idx) => {
-                            currentIndex = idx;
-                            settle();
-                        });
-                    } else {
-                        enterManualMode();
-                    }
+        function createWheel(el, opts) {
+            let vals = [];
+            let current = opts.index;
+            let settleTimer = null;
+            let rafPending = false;
+            let moved = false;
+
+            el.innerHTML = '';
+            el.tabIndex = 0;
+            el.setAttribute('role', 'spinbutton');
+            el.setAttribute('aria-label', opts.label);
+            const track = document.createElement('div');
+            track.className = 'ios-wheel-track';
+            el.appendChild(track);
+
+            function renderItems() {
+                track.innerHTML = '';
+                vals.forEach((v, i) => {
+                    const item = document.createElement('div');
+                    item.className = 'ios-wheel-item';
+                    item.textContent = v;
+                    item.addEventListener('click', () => { if (!moved) scrollToIndex(i, true); });
+                    track.appendChild(item);
                 });
-                el.appendChild(item);
+            }
+
+            // 3D drum: rows tilt and fade as they move away from the centre band
+            function paint() {
+                rafPending = false;
+                const pos = el.scrollTop / WHEEL_ITEM_H;
+                const items = track.children;
+                for (let i = 0; i < items.length; i++) {
+                    const off = i - pos;
+                    const abs = Math.abs(off);
+                    if (abs > 4) { items[i].style.opacity = '0'; continue; }
+                    const angle = Math.max(-80, Math.min(80, -off * 20));
+                    items[i].style.transform = `rotateX(${angle}deg)`;
+                    items[i].style.opacity = String(Math.max(0.2, 1 - abs * 0.25));
+                }
+            }
+            function requestPaint() {
+                if (!rafPending) { rafPending = true; requestAnimationFrame(paint); }
+            }
+
+            function updateAria() {
+                el.setAttribute('aria-valuetext', String(vals[current]));
+                el.setAttribute('aria-valuenow', String(current + 1));
+                el.setAttribute('aria-valuemin', '1');
+                el.setAttribute('aria-valuemax', String(vals.length));
             }
 
             function settle() {
-                currentIndex = Math.max(0, Math.min(vals.length - 1, currentIndex));
-                render();
-                onSettle(currentIndex);
-            }
-
-            // --- Tap-to-type: tapping the number opens numeric entry ---
-            // Only digits 0-9 (plus editing keys) are accepted -- anything else is ignored.
-            function enterManualMode() {
-                el.innerHTML = '';
-
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.inputMode = 'numeric';
-                input.autocomplete = 'off';
-                input.className = 'wheel-manual-input';
-                input.value = pickerConfig.currentNumber();
-                el.appendChild(input);
-                input.focus();
-                input.select();
-
-                input.addEventListener('keydown', (e) => {
-                    const allowed = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Escape'];
-                    if (allowed.includes(e.key)) {
-                        if (e.key === 'Enter') input.blur();
-                        if (e.key === 'Escape') { input.dataset.cancelled = '1'; input.blur(); }
-                        return;
-                    }
-                    if (!/^[0-9]$/.test(e.key)) {
-                        e.preventDefault(); // non-digit keys simply don't register
-                    }
-                });
-
-                function finish() {
-                    const cancelled = input.dataset.cancelled === '1';
-                    const raw = input.value.replace(/[^0-9]/g, '');
-
-                    if (cancelled || raw === '') { render(); return; }
-
-                    let num = parseInt(raw, 10);
-                    num = Math.max(pickerConfig.min, Math.min(pickerConfig.max, num));
-                    currentIndex = pickerConfig.indexFromNumber(num);
-                    settle();
+                const idx = Math.max(0, Math.min(vals.length - 1, Math.round(el.scrollTop / WHEEL_ITEM_H)));
+                if (idx !== current) {
+                    current = idx;
+                    updateAria();
+                    opts.onChange(idx);
                 }
-                input.addEventListener('blur', finish);
             }
 
-            render();
+            function scrollToIndex(i, smooth) {
+                i = Math.max(0, Math.min(vals.length - 1, i));
+                el.scrollTo({ top: i * WHEEL_ITEM_H, behavior: (smooth && !PREFERS_REDUCED_MOTION) ? 'smooth' : 'auto' });
+                if (!smooth || PREFERS_REDUCED_MOTION) { paint(); settle(); }
+            }
 
-            return {
+            el.addEventListener('scroll', () => {
+                requestPaint();
+                clearTimeout(settleTimer);
+                settleTimer = setTimeout(settle, 110);
+            }, { passive: true });
+            el.addEventListener('scrollend', () => { clearTimeout(settleTimer); settle(); });
+
+            // Desktop: drag with the mouse, release with momentum
+            let dragStartY = 0, dragStartTop = 0, lastY = 0, lastT = 0, velocity = 0, dragging = false;
+            el.addEventListener('pointerdown', (e) => {
+                moved = false;
+                if (e.pointerType !== 'mouse' || e.button !== 0) return;
+                dragging = true;
+                dragStartY = lastY = e.clientY;
+                dragStartTop = el.scrollTop;
+                lastT = performance.now();
+                velocity = 0;
+                el.style.scrollSnapType = 'none';
+                el.classList.add('dragging');
+            });
+            window.addEventListener('pointermove', (e) => {
+                if (!dragging) return;
+                const dy = e.clientY - dragStartY;
+                if (Math.abs(dy) > 4) moved = true;
+                el.scrollTop = dragStartTop - dy;
+                const now = performance.now();
+                const dt = Math.max(1, now - lastT);
+                velocity = (e.clientY - lastY) / dt;
+                lastY = e.clientY; lastT = now;
+            });
+            window.addEventListener('pointerup', () => {
+                if (!dragging) return;
+                dragging = false;
+                el.classList.remove('dragging');
+                const projected = el.scrollTop - velocity * 160;
+                el.style.scrollSnapType = '';
+                scrollToIndex(Math.round(projected / WHEEL_ITEM_H), true);
+            });
+
+            // Keyboard: arrows step one row, Page keys jump five, Home/End go to ends
+            el.addEventListener('keydown', (e) => {
+                const map = { ArrowUp: -1, ArrowDown: 1, PageUp: -5, PageDown: 5 };
+                if (map[e.key] !== undefined) { e.preventDefault(); scrollToIndex(current + map[e.key], true); }
+                else if (e.key === 'Home') { e.preventDefault(); scrollToIndex(0, true); }
+                else if (e.key === 'End') { e.preventDefault(); scrollToIndex(vals.length - 1, true); }
+            });
+
+            const api = {
+                // Replace the rows (e.g. when month length changes) without firing onChange
                 setValues(newValues, newIndex) {
                     vals = newValues;
-                    currentIndex = newIndex;
-                    render();
+                    current = Math.max(0, Math.min(vals.length - 1, newIndex));
+                    renderItems();
+                    el.scrollTop = current * WHEEL_ITEM_H;
+                    updateAria();
+                    paint();
                 },
-                setIndex(idx) {
-                    currentIndex = idx;
-                    settle();
+                // Move to a row without firing onChange
+                setIndex(idx, smooth) {
+                    current = Math.max(0, Math.min(vals.length - 1, idx));
+                    updateAria();
+                    el.scrollTo({ top: current * WHEEL_ITEM_H, behavior: (smooth && !PREFERS_REDUCED_MOTION) ? 'smooth' : 'auto' });
+                    requestPaint();
                 },
-                getIndex() { return currentIndex; }
+                getIndex() { return current; },
+                count() { return vals.length; }
             };
+            api.setValues(opts.values, opts.index);
+            return api;
         }
-
 
         function daysInMonth(year, month) {
             return new Date(year, month + 1, 0).getDate();
@@ -1003,88 +1133,68 @@
             return years;
         }
 
+        function dayValues(year, month) {
+            return Array.from({ length: daysInMonth(year, month) }, (_, i) => String(i + 1));
+        }
+
         let dayWheel = null, monthWheel = null, yearWheel = null;
+
+        function updatePickerSummary() {
+            const d = new Date(draftDate.year, draftDate.month, draftDate.day);
+            document.getElementById('ios-picker-summary').innerText =
+                d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        }
 
         function refreshDayWheel() {
             const total = daysInMonth(draftDate.year, draftDate.month);
             if (draftDate.day > total) draftDate.day = total;
-            const dayVals = Array.from({ length: total }, (_, i) => String(i + 1).padStart(2, '0'));
-            dayWheel.setValues(dayVals, draftDate.day - 1);
+            if (dayWheel.count() !== total) {
+                dayWheel.setValues(dayValues(draftDate.year, draftDate.month), draftDate.day - 1);
+            }
+            updatePickerSummary();
+        }
+
+        function showDatePickerModal() {
+            // Must be visible before building, so the wheels can measure and scroll
+            document.getElementById('date-picker-modal').classList.remove('hidden');
+            buildDatePickerWheels();
+            updatePickerSummary();
         }
 
         function openDatePicker() {
             DATE_PICKER_TARGET = 'log';
             draftDate = { ...committedDate };
-            buildDatePickerWheels();
-            document.getElementById('date-picker-modal').classList.remove('hidden');
+            showDatePickerModal();
         }
 
         function openJournalDatePicker() {
             DATE_PICKER_TARGET = 'journal';
             draftDate = { ...journalDate };
-            buildDatePickerWheels();
-            document.getElementById('date-picker-modal').classList.remove('hidden');
+            showDatePickerModal();
         }
 
         function buildDatePickerWheels() {
-            const dayEl = document.getElementById('wheel-col-day');
-            const monthEl = document.getElementById('wheel-col-month');
-            const yearEl = document.getElementById('wheel-col-year');
-
-            const dayTotal = daysInMonth(draftDate.year, draftDate.month);
-            const dayVals = Array.from({ length: dayTotal }, (_, i) => String(i + 1).padStart(2, '0'));
-            dayWheel = makeWheelColumn(dayEl, dayVals, draftDate.day - 1, (idx) => {
-                draftDate.day = idx + 1;
-            }, {
-                type: 'manual',
-                min: 1, max: 31,
-                currentNumber: () => String(draftDate.day),
-                indexFromNumber: (num) => Math.min(num, daysInMonth(draftDate.year, draftDate.month)) - 1
-            });
-
-            monthWheel = makeWheelColumn(monthEl, MONTH_ABBR, draftDate.month, (idx) => {
-                draftDate.month = idx;
-                refreshDayWheel();
-            }, {
-                type: 'grid',
-                openGrid: (activeIndex, onSelect) => openMonthGridPicker(activeIndex, onSelect)
-            });
-
             const years = buildYearRange();
-            const yearIdx = Math.max(0, years.indexOf(draftDate.year));
-            yearWheel = makeWheelColumn(yearEl, years, yearIdx, (idx) => {
-                draftDate.year = years[idx];
-                refreshDayWheel();
-            }, {
-                type: 'manual',
-                min: years[0], max: years[years.length - 1],
-                currentNumber: () => String(draftDate.year),
-                indexFromNumber: (num) => {
-                    const clamped = Math.max(years[0], Math.min(years[years.length - 1], num));
-                    return years.indexOf(clamped);
-                }
-            });
-        }
+            if (!years.includes(draftDate.year)) draftDate.year = Math.max(years[0], Math.min(years[years.length - 1], draftDate.year));
 
-        // --- Month grid picker: 12 fixed boxes, no keyboard ever appears ---
-        function openMonthGridPicker(activeIndex, onSelect) {
-            const grid = document.getElementById('month-grid-grid');
-            grid.innerHTML = '';
-            MONTH_ABBR.forEach((m, idx) => {
-                const cell = document.createElement('div');
-                cell.className = 'grid-popup-cell' + (idx === activeIndex ? ' active' : '');
-                cell.textContent = m;
-                cell.addEventListener('click', () => {
-                    onSelect(idx);
-                    closeMonthGridPicker();
-                });
-                grid.appendChild(cell);
+            dayWheel = createWheel(document.getElementById('wheel-col-day'), {
+                label: 'Day',
+                values: dayValues(draftDate.year, draftDate.month),
+                index: draftDate.day - 1,
+                onChange: (idx) => { draftDate.day = idx + 1; updatePickerSummary(); }
             });
-            document.getElementById('month-grid-modal').classList.remove('hidden');
-        }
-
-        function closeMonthGridPicker() {
-            document.getElementById('month-grid-modal').classList.add('hidden');
+            monthWheel = createWheel(document.getElementById('wheel-col-month'), {
+                label: 'Month',
+                values: MONTH_FULL,
+                index: draftDate.month,
+                onChange: (idx) => { draftDate.month = idx; refreshDayWheel(); }
+            });
+            yearWheel = createWheel(document.getElementById('wheel-col-year'), {
+                label: 'Year',
+                values: years,
+                index: years.indexOf(draftDate.year),
+                onChange: (idx) => { draftDate.year = years[idx]; refreshDayWheel(); }
+            });
         }
 
         function closeDatePicker() {
@@ -1105,30 +1215,54 @@
         function jumpToToday() {
             const today = new Date();
             draftDate = { year: today.getFullYear(), month: today.getMonth(), day: today.getDate() };
-
             const years = buildYearRange();
-            const yearIdx = Math.max(0, years.indexOf(draftDate.year));
-
-            monthWheel.setValues(MONTH_ABBR, draftDate.month);
-            yearWheel.setValues(years, yearIdx);
-            refreshDayWheel();
+            yearWheel.setIndex(years.indexOf(draftDate.year), true);
+            monthWheel.setIndex(draftDate.month, true);
+            const total = daysInMonth(draftDate.year, draftDate.month);
+            if (dayWheel.count() !== total) dayWheel.setValues(dayValues(draftDate.year, draftDate.month), dayWheel.getIndex());
+            dayWheel.setIndex(draftDate.day - 1, true);
+            updatePickerSummary();
         }
 
+        // Tap outside the sheet or press Escape to dismiss (iOS sheet behaviour)
+        document.getElementById('date-picker-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'date-picker-modal') closeDatePicker();
+        });
+        document.addEventListener('keydown', (e) => {
+            const modal = document.getElementById('date-picker-modal');
+            if (modal.classList.contains('hidden')) return;
+            if (e.key === 'Escape') closeDatePicker();
+            else if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('ios-wheel')) confirmDatePicker();
+        });
+
         // --- SUBMISSION ---
+        // Chanting score: earliest rounds first, 16-round cap (matches the server).
+        function chantingPoints(early, mid, late) {
+            let remaining = 16, pts = 0;
+            const e = Math.min(early, remaining); pts += e * (25 / 16); remaining -= e;
+            const m = Math.min(mid, remaining);   pts += m * (20 / 16); remaining -= m;
+            const l = Math.min(late, remaining);  pts += l * (15 / 16);
+            return Math.min(pts, 25);
+        }
+
         function submitEntry(e) {
             e.preventDefault();
             const date = getFormattedDate(); 
-            const r = parseFloat(document.getElementById('e-rounds').value)||0;
+            const rEarly = parseFloat(document.getElementById('e-rounds-early').value)||0;
+            const rMid = parseFloat(document.getElementById('e-rounds-mid').value)||0;
+            const rLate = parseFloat(document.getElementById('e-rounds-late').value)||0;
+            const r = rEarly + rMid + rLate;
             const rd = parseFloat(document.getElementById('e-read').value)||0;
             const l = parseFloat(document.getElementById('e-lec').value)||0;
             const s = parseFloat(document.getElementById('e-seva').value)||0;
 
-            let score = Math.round(
-                (Math.min(r, 16) * 2.5) + 
-                (Math.min(rd, 60) / 3) + 
-                (Math.min(l, 60) / 3) + 
-                (Math.min(s, 60) / 3)
-            );
+            const rawScore =
+                chantingPoints(rEarly, rMid, rLate) +
+                Math.min(rd * (30 / 60), 30) +
+                Math.min(l * (30 / 60), 30) +
+                Math.min(s * (15 / 60), 15);
+            let score = Math.round(rawScore);
+            if (rawScore > 0 && score === 0) score = 1;   // any real effort scores at least 1
             if(score > 100) score = 100;
 
             // Overwrite / Lock Check
@@ -1152,13 +1286,14 @@
                  if (!confirm("⚠️ You are adding data to a past week. Proceed?")) return;
             }
 
-            DB.addLog(CURRENT_USER.username, { date, rounds:r, reading:rd, lecture:l, service:s, score });
+            DB.addLog(CURRENT_USER.username, { date, rounds:r, roundsEarly:rEarly, roundsMid:rMid, roundsLate:rLate, reading:rd, lecture:l, service:s, score });
             EDITING_ENTRY_DATE = null;
             updateDashboard();
             closeLogEntryDropdown();
         }
 
-        function editEntry(date) {
+        function editEntry(e, date) {
+            if (e && e.stopPropagation) e.stopPropagation();
             const log = DB.getUserLogs(CURRENT_USER.username).find(l => l.date === date);
             if (!log) return;
 
@@ -1166,7 +1301,9 @@
             committedDate = { year: y, month: m - 1, day: d };
             updateDatePickerDisplay();
 
-            document.getElementById('e-rounds').value = log.rounds;
+            document.getElementById('e-rounds-early').value = log.roundsEarly || 0;
+            document.getElementById('e-rounds-mid').value = log.roundsMid || 0;
+            document.getElementById('e-rounds-late').value = log.roundsLate || 0;
             document.getElementById('e-read').value = log.reading;
             document.getElementById('e-lec').value = log.lecture;
             document.getElementById('e-seva').value = log.service;
@@ -1238,7 +1375,7 @@
                         </div>
                         <div style="display:flex; align-items:center; gap:8px;">
                             <span class="score-badge">${log.score}</span>
-                            <button type="button" onclick="editEntry('${log.date}')" title="Edit entry" style="background:none; border:none; font-size:0.95rem; cursor:pointer; padding:2px;">✏️</button>
+                            <button type="button" onclick="editEntry(event, '${log.date}')" title="Edit entry" style="background:none; border:none; font-size:0.95rem; cursor:pointer; padding:2px;">✏️</button>
                             <button type="button" onclick="deleteEntrySingle('${log.date}')" title="Delete entry" style="background:none; border:none; font-size:0.95rem; cursor:pointer; padding:2px;">🗑️</button>
                         </div>
                     </div>`;
@@ -1452,7 +1589,7 @@
             const m4 = scores.reduce((a,b) => a + Math.pow(b-mean, 4), 0) / n;
             const kurtosis = dev === 0 ? 0 : (m4 / Math.pow(dev, 4)) - 3;
 
-            document.getElementById('s-mean').innerText = mean.toFixed(1);
+            document.getElementById('s-mean').innerText = Math.round(mean);
             document.getElementById('s-median').innerText = median;
             document.getElementById('s-mode').innerText = mode;
             document.getElementById('s-dev').innerText = dev.toFixed(2);
@@ -1683,6 +1820,21 @@
         }
 
         // --- ADMIN ---
+        async function loadReports() {
+            let data;
+            try { data = await api('/api/admin/reports'); }
+            catch (err) { console.error(err); return; }
+            const esc = (x) => String(x == null ? '' : x).replace(/</g, '&lt;');
+            const body = (rows) => (rows && rows.length)
+                ? rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.displayName)}</td><td><span class="score-badge">${r.score}</span></td></tr>`).join('')
+                : `<tr><td colspan="3" style="color:var(--text-muted);text-align:center;padding:1rem;">No entries yet</td></tr>`;
+            document.getElementById('rep-weekly').innerHTML  = body(data.weekly);
+            document.getElementById('rep-monthly').innerHTML = body(data.monthly && data.monthly.rows);
+            document.getElementById('rep-yearly').innerHTML  = body(data.yearly && data.yearly.rows);
+            if (data.monthly) document.getElementById('rep-monthly-title').innerText = data.monthly.label;
+            if (data.yearly)  document.getElementById('rep-yearly-title').innerText  = 'Year ' + data.yearly.label;
+        }
+
         function renderAdmin() {
             const allUsers = DB.getUsers();
             const tbody = document.getElementById('admin-tbody');
