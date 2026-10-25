@@ -117,7 +117,7 @@
         .log-entry-dropdown.open { display: block; }
 
         /* --- MODAL OVERLAYS --- */
-        #date-picker-modal, #admin-view-modal {
+        #date-picker-modal, #admin-view-modal, #log-entry-modal {
             position: fixed; inset: 0; z-index: 3000;
             background: rgba(0,0,0,0.4);
             display: flex; align-items: center; justify-content: center; padding: 1rem;
@@ -336,7 +336,7 @@
             
             <nav class="nav-tabs">
                 <button class="nav-btn active" onclick="switchView('overview', this)">Overview</button>
-                <button class="nav-btn" onclick="switchView('stats', this)">Statistics & AI</button>
+                <button class="nav-btn" onclick="switchView('stats', this)">Progress</button>
                 <button class="nav-btn" onclick="switchView('journals', this)">Journals</button>
                 <button class="nav-btn" onclick="switchView('settings', this)">Settings</button>
                 <button class="nav-btn hidden" id="nav-admin" onclick="switchView('admin', this)">Admin</button>
@@ -356,14 +356,12 @@
                         
                         <div class="grid-col-left">
                             <div class="card log-entry-card">
-                                <button type="button" class="log-entry-toggle" id="log-entry-toggle" onclick="toggleLogEntryForm()">
-                                    <span>📝 Log Entry</span>
-                                    <span class="log-entry-chevron" aria-hidden="true">▾</span>
-                                </button>
-                                <div class="log-entry-hint">Tap to fill in today's chanting, reading & service</div>
+                                <button type="button" class="btn-primary" style="width:100%; font-size:1rem;" onclick="openLogEntryForm()">📝 Log Entry</button>
 
-                                <div class="log-entry-dropdown" id="log-entry-dropdown">
-                                    <form onsubmit="submitEntry(event)">
+                                <div id="log-entry-modal" class="hidden">
+                                    <div class="wheel-picker-card" style="width:380px; max-width:92vw; text-align:left; max-height:88vh; overflow-y:auto;">
+                                        <div class="wheel-picker-title" style="text-align:left; margin-bottom:0.75rem;">📝 Log Entry</div>
+                                        <form onsubmit="submitEntry(event)">
 
                                         <label>Date Entry</label>
                                         <button type="button" id="date-picker-btn" class="input-std date-picker-trigger" onclick="openDatePicker()" style="margin-bottom: 1rem;">
@@ -372,31 +370,37 @@
                                         </button>
 
                                         <div class="form-group">
-                                            <label>Chanting — before 7am (rounds)</label>
+                                            <label>Japa Session (before 7am)</label>
+                                            <input type="number" id="e-rounds-session" class="input-std" placeholder="Rounds in the Japa Session" min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Japa — before 7am</label>
                                             <input type="number" id="e-rounds-early" class="input-std" placeholder="Rounds before 7am" min="0">
                                         </div>
                                         <div class="form-group">
-                                            <label>Chanting — 7 to 9am (rounds)</label>
+                                            <label>Japa — 7 to 9am</label>
                                             <input type="number" id="e-rounds-mid" class="input-std" placeholder="Rounds 7–9am" min="0">
                                         </div>
                                         <div class="form-group">
-                                            <label>Chanting — after 9am (rounds)</label>
+                                            <label>Japa — after 9am</label>
                                             <input type="number" id="e-rounds-late" class="input-std" placeholder="Rounds after 9am" min="0">
                                         </div>
                                         <div class="form-group">
-                                            <label>Reading (Mins / 60)</label>
+                                            <label>Reading</label>
                                             <input type="number" id="e-read" class="input-std" placeholder="Minutes read" min="0">
                                         </div>
                                         <div class="form-group">
-                                            <label>Lecture (Mins / 60)</label>
+                                            <label>Lecture</label>
                                             <input type="number" id="e-lec" class="input-std" placeholder="Minutes of lecture" min="0">
                                         </div>
                                         <div class="form-group">
-                                            <label>Service (Mins / 60)</label>
+                                            <label>Seva / Service</label>
                                             <input type="number" id="e-seva" class="input-std" placeholder="Minutes of service" min="0">
                                         </div>
-                                        <button type="submit" class="btn-primary">Enter</button>
-                                    </form>
+                                        <button type="submit" class="btn-primary" style="width:100%;">Save Sādhana</button>
+                                        </form>
+                                        <button type="button" onclick="closeLogEntryForm()" style="width:100%; margin-top:8px; background:none; border:1px solid var(--border); color:var(--text-muted); padding:0.65rem; border-radius:10px; cursor:pointer; font-size:0.95rem;">Cancel</button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -447,29 +451,10 @@
                 </div>
 
                 <div id="view-stats" class="hidden">
-                    <div class="card" style="background: linear-gradient(135deg, rgba(var(--primary-rgb),0.1), rgba(124,58,237,0.1)); border:1px solid var(--primary); margin-bottom: 1.5rem;">
-                        <h2 style="color:var(--primary);">🤖 Advanced AI Coach</h2>
-                        <p id="ai-text" style="font-size:1.05rem; line-height:1.6; font-weight:500;">
-                            Generate logs to see insights...
-                        </p>
+                    <div class="card" style="margin-bottom:1.5rem;">
+                        <h2>Monthly Progress (<span id="monthly-year"></span>)</h2>
+                        <div id="monthly-list" class="list-container" style="max-height:320px;"></div>
                     </div>
-
-                    <h3 style="margin-bottom:10px; color:var(--text-muted); font-size:0.9rem;">DESCRIPTIVE STATISTICS</h3>
-                    <div class="stats-row">
-                        <div class="stat-box"><div class="stat-num" id="s-mean">0</div><div class="stat-lbl">Mean (μ)</div></div>
-                        <div class="stat-box"><div class="stat-num" id="s-median">0</div><div class="stat-lbl">Median</div></div>
-                        <div class="stat-box"><div class="stat-num" id="s-mode">0</div><div class="stat-lbl">Mode</div></div>
-                        <div class="stat-box"><div class="stat-num" id="s-dev">0</div><div class="stat-lbl">Std. Dev (σ)</div></div>
-                    </div>
-                    
-                    <h3 style="margin-bottom:10px; color:var(--text-muted); font-size:0.9rem;">DISTRIBUTION METRICS</h3>
-                    <div class="stats-row">
-                        <div class="stat-box"><div class="stat-num" id="s-var">0</div><div class="stat-lbl">Variance (σ²)</div></div>
-                        <div class="stat-box"><div class="stat-num" id="s-cv">0%</div><div class="stat-lbl">Coeff. of Variation</div></div>
-                        <div class="stat-box"><div class="stat-num" id="s-skew">0</div><div class="stat-lbl">Skewness</div></div>
-                        <div class="stat-box"><div class="stat-num" id="s-kurt">0</div><div class="stat-lbl">Kurtosis</div></div>
-                    </div>
-
                     <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
                         <div class="card">
                             <h2>Score Distribution</h2>
@@ -543,13 +528,6 @@
                                 </div>
                             </div>
                             
-                            <div class="form-group" style="margin-top:1rem;">
-                                <label>Data Management</label>
-                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                                    <button onclick="exportData()" class="btn-outline">Export JSON</button>
-                                    <button onclick="clearLogs()" class="btn-danger">Wipe My Data</button>
-                                </div>
-                            </div>
                             
                             <hr style="border:0; border-top:1px solid var(--border); margin: 1.5rem 0;">
                             
@@ -743,6 +721,7 @@
                 persist(
                     api('/api/logs', 'POST', {
                         date: logEntry.date,
+                        roundsSession: logEntry.roundsSession,
                         roundsEarly: logEntry.roundsEarly, roundsMid: logEntry.roundsMid, roundsLate: logEntry.roundsLate,
                         reading: logEntry.reading, lecture: logEntry.lecture, service: logEntry.service
                     }).then(saved => {
@@ -1237,30 +1216,35 @@
 
         // --- SUBMISSION ---
         // Chanting score: earliest rounds first, 16-round cap (matches the server).
-        function chantingPoints(early, mid, late) {
-            let remaining = 16, pts = 0;
-            const e = Math.min(early, remaining); pts += e * (25 / 16); remaining -= e;
-            const m = Math.min(mid, remaining);   pts += m * (20 / 16); remaining -= m;
-            const l = Math.min(late, remaining);  pts += l * (15 / 16);
+        function chantingPoints(session, early, mid, late) {
+            const pts = session * 2.5 + early * 2.0 + mid * 1.5 + late * 1.0;
             return Math.min(pts, 25);
         }
+        function bracketPoints(minutes, tiers) {
+            let p = 0;
+            for (const t of tiers) if (minutes >= t[0]) p = t[1];
+            return p;
+        }
+        const READING_TIERS = [[1,7],[15,15],[30,20],[45,30]];
+        const SEVA_TIERS = [[1,5],[15,8],[30,12],[45,15]];
 
         function submitEntry(e) {
             e.preventDefault();
             const date = getFormattedDate(); 
+            const rSession = parseFloat(document.getElementById('e-rounds-session').value)||0;
             const rEarly = parseFloat(document.getElementById('e-rounds-early').value)||0;
             const rMid = parseFloat(document.getElementById('e-rounds-mid').value)||0;
             const rLate = parseFloat(document.getElementById('e-rounds-late').value)||0;
-            const r = rEarly + rMid + rLate;
+            const r = rSession + rEarly + rMid + rLate;
             const rd = parseFloat(document.getElementById('e-read').value)||0;
             const l = parseFloat(document.getElementById('e-lec').value)||0;
             const s = parseFloat(document.getElementById('e-seva').value)||0;
 
             const rawScore =
-                chantingPoints(rEarly, rMid, rLate) +
-                Math.min(rd * (30 / 60), 30) +
-                Math.min(l * (30 / 60), 30) +
-                Math.min(s * (15 / 60), 15);
+                chantingPoints(rSession, rEarly, rMid, rLate) +
+                bracketPoints(rd, READING_TIERS) +
+                bracketPoints(l, READING_TIERS) +
+                bracketPoints(s, SEVA_TIERS);
             let score = Math.round(rawScore);
             if (rawScore > 0 && score === 0) score = 1;   // any real effort scores at least 1
             if(score > 100) score = 100;
@@ -1286,7 +1270,7 @@
                  if (!confirm("⚠️ You are adding data to a past week. Proceed?")) return;
             }
 
-            DB.addLog(CURRENT_USER.username, { date, rounds:r, roundsEarly:rEarly, roundsMid:rMid, roundsLate:rLate, reading:rd, lecture:l, service:s, score });
+            DB.addLog(CURRENT_USER.username, { date, rounds:r, roundsSession:rSession, roundsEarly:rEarly, roundsMid:rMid, roundsLate:rLate, reading:rd, lecture:l, service:s, score });
             EDITING_ENTRY_DATE = null;
             updateDashboard();
             closeLogEntryDropdown();
@@ -1301,6 +1285,7 @@
             committedDate = { year: y, month: m - 1, day: d };
             updateDatePickerDisplay();
 
+            document.getElementById('e-rounds-session').value = log.roundsSession || 0;
             document.getElementById('e-rounds-early').value = log.roundsEarly || 0;
             document.getElementById('e-rounds-mid').value = log.roundsMid || 0;
             document.getElementById('e-rounds-late').value = log.roundsLate || 0;
@@ -1310,11 +1295,7 @@
 
             EDITING_ENTRY_DATE = date;
 
-            const dropdown = document.getElementById('log-entry-dropdown');
-            const toggle = document.getElementById('log-entry-toggle');
-            dropdown.classList.add('open');
-            toggle.classList.add('open');
-            dropdown.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            document.getElementById('log-entry-modal').classList.remove('hidden');
         }
 
         function deleteEntrySingle(date) {
@@ -1325,27 +1306,29 @@
         }
 
         // --- LOG ENTRY DROPDOWN ---
-        function toggleLogEntryForm() {
-            const dropdown = document.getElementById('log-entry-dropdown');
-            const toggle = document.getElementById('log-entry-toggle');
-            const isOpen = dropdown.classList.toggle('open');
-            toggle.classList.toggle('open', isOpen);
-            if (!isOpen) EDITING_ENTRY_DATE = null;
+        function openLogEntryForm() {
+            EDITING_ENTRY_DATE = null;
+            ['e-rounds-session','e-rounds-early','e-rounds-mid','e-rounds-late','e-read','e-lec','e-seva'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.value = '';
+            });
+            const t = new Date();
+            committedDate = { year: t.getFullYear(), month: t.getMonth(), day: t.getDate() };
+            updateDatePickerDisplay();
+            document.getElementById('log-entry-modal').classList.remove('hidden');
         }
 
-        function closeLogEntryDropdown() {
-            document.getElementById('log-entry-dropdown').classList.remove('open');
-            document.getElementById('log-entry-toggle').classList.remove('open');
+        function closeLogEntryForm() {
+            document.getElementById('log-entry-modal').classList.add('hidden');
             EDITING_ENTRY_DATE = null;
         }
 
-        document.addEventListener('click', (e) => {
-            const dropdown = document.getElementById('log-entry-dropdown');
-            const toggle = document.getElementById('log-entry-toggle');
-            if (!dropdown || !dropdown.classList.contains('open')) return;
-            if (!dropdown.contains(e.target) && !toggle.contains(e.target)) {
-                closeLogEntryDropdown();
-            }
+        function closeLogEntryDropdown() {
+            document.getElementById('log-entry-modal').classList.add('hidden');
+            EDITING_ENTRY_DATE = null;
+        }
+
+        document.getElementById('log-entry-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'log-entry-modal') closeLogEntryForm();
         });
 
         // --- DASHBOARD RENDERER ---
@@ -1555,73 +1538,53 @@
         function renderStats() {
             const logs = DB.getUserLogs(CURRENT_USER.username);
             const scores = logs.map(l => l.score);
-            
-            // Yearly
+
+            // Yearly progress
             const yearlyMap = {};
             logs.forEach(l => {
                 const y = l.date.substring(0, 4);
-                if (!yearlyMap[y]) yearlyMap[y] = 0;
-                yearlyMap[y] += l.score;
+                if (!yearlyMap[y]) yearlyMap[y] = { total: 0, days: 0 };
+                yearlyMap[y].total += l.score;
+                yearlyMap[y].days += 1;
             });
             const yList = document.getElementById('yearly-list');
             yList.innerHTML = '';
             Object.keys(yearlyMap).sort((a,b) => b - a).forEach(year => {
-                yList.innerHTML += `<div class="year-row"><span>${year}</span><span class="year-val">${yearlyMap[year]} pts</span></div>`;
+                const d = yearlyMap[year];
+                const avg = d.days ? Math.round(d.total / d.days) : 0;
+                yList.innerHTML += `<div class="year-row"><span>${year}</span><span class="year-val" style="font-size:0.82rem; text-align:right;">avg ${avg}/day · ${d.days} ${d.days === 1 ? 'day' : 'days'} · ${d.total} pts</span></div>`;
             });
+
+            // Monthly progress (current year)
+            const mNow = new Date();
+            const curYear = String(mNow.getFullYear());
+            document.getElementById('monthly-year').innerText = curYear;
+            const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            const monthlyMap = {};
+            logs.forEach(l => {
+                if (l.date.substring(0,4) !== curYear) return;
+                const mi = parseInt(l.date.substring(5,7), 10) - 1;
+                if (!monthlyMap[mi]) monthlyMap[mi] = { total: 0, days: 0 };
+                monthlyMap[mi].total += l.score;
+                monthlyMap[mi].days += 1;
+            });
+            const mList = document.getElementById('monthly-list');
+            const months = Object.keys(monthlyMap).map(Number).sort((a,b) => b - a);
+            mList.innerHTML = months.length
+                ? months.map(mi => {
+                    const d = monthlyMap[mi];
+                    const avg = d.days ? Math.round(d.total / d.days) : 0;
+                    return `<div class="year-row"><span>${MONTH_NAMES[mi]}</span><span class="year-val" style="font-size:0.82rem; text-align:right;">avg ${avg}/day · ${d.days} ${d.days === 1 ? 'day' : 'days'} · ${d.total} pts</span></div>`;
+                  }).join('')
+                : `<div style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:1rem;">No entries yet this year.</div>`;
 
             if(!scores.length) return;
 
-            // Math
-            const n = scores.length;
-            const mean = scores.reduce((a,b)=>a+b,0) / n;
-            const sorted = [...scores].sort((a,b)=>a-b);
-            const median = sorted[Math.floor(n/2)];
-            
-            const freq = {};
-            let maxFreq = 0; let mode = scores[0];
-            scores.forEach(x => { freq[x]=(freq[x]||0)+1; if(freq[x]>maxFreq){maxFreq=freq[x]; mode=x;} });
-
-            const variance = scores.reduce((a,b) => a + Math.pow(b-mean, 2), 0) / n;
-            const dev = Math.sqrt(variance);
-            const cv = mean === 0 ? 0 : (dev / mean) * 100;
-            const m3 = scores.reduce((a,b) => a + Math.pow(b-mean, 3), 0) / n;
-            const skewness = dev === 0 ? 0 : m3 / Math.pow(dev, 3);
-            const m4 = scores.reduce((a,b) => a + Math.pow(b-mean, 4), 0) / n;
-            const kurtosis = dev === 0 ? 0 : (m4 / Math.pow(dev, 4)) - 3;
-
-            document.getElementById('s-mean').innerText = Math.round(mean);
-            document.getElementById('s-median').innerText = median;
-            document.getElementById('s-mode').innerText = mode;
-            document.getElementById('s-dev').innerText = dev.toFixed(2);
-            document.getElementById('s-var').innerText = variance.toFixed(1);
-            document.getElementById('s-cv').innerText = cv.toFixed(1) + '%';
-            document.getElementById('s-skew').innerText = skewness.toFixed(2);
-            document.getElementById('s-kurt').innerText = kurtosis.toFixed(2);
-
-            // AI NARRATIVE
-            let text = `Analysis of your last ${n} days of practice. `;
-            if(cv < 10) text += "<strong>Your determination is unshakable.</strong> You show incredible steadiness day in and day out. ";
-            else if(cv < 25) text += "<strong>You have a solid routine.</strong> There are minor fluctuations, but your foundation is strong. ";
-            else text += "<strong>Life is testing your focus.</strong> Your practice varies widely; try to establish a minimum daily baseline. ";
-
-            if(skewness < -0.5) text += "You generally perform very well; the low scores are just rare exceptions. Don't let them discourage you. ";
-            else if(skewness > 0.5) text += "You have moments of brilliance where you exceed expectations. Let's try to make those 'high' days your new normal. ";
-            
-            if(scores.length >= 5) {
-                const recent = scores.slice(-5);
-                const slope = recent[4] - recent[0];
-                if(slope > 10) text += "<strong>You are building momentum!</strong> Your spiritual strength is visibly growing this week.";
-                else if(slope < -10) text += "<strong>Stay vigilant.</strong> Your recent intensity has dipped slightly. Re-ignite your enthusiasm.";
-            }
-
-            document.getElementById('ai-text').innerHTML = text;
-
-            // Hist Chart
+            // Score distribution histogram
             const bins = [0,0,0,0,0];
-            scores.forEach(s => {
-                if(s<=20) bins[0]++; else if(s<=40) bins[1]++; else if(s<=60) bins[2]++; else if(s<=80) bins[3]++; else bins[4]++;
+            scores.forEach(sc => {
+                if(sc<=20) bins[0]++; else if(sc<=40) bins[1]++; else if(sc<=60) bins[2]++; else if(sc<=80) bins[3]++; else bins[4]++;
             });
-            
             if(CHART_STORE['chart-hist']) CHART_STORE['chart-hist'].destroy();
             const ctx = document.getElementById('chart-hist').getContext('2d');
             const color = getComputedStyle(document.body).getPropertyValue('--primary');
