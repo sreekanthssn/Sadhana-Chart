@@ -79,6 +79,8 @@
         .nav-btn.active { background: var(--bg-card); color: var(--primary); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .user-profile { display: flex; align-items: center; gap: 1rem; }
         .avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); }
+        .avatar-btn { cursor: pointer; transition: border-color 0.2s; }
+        .avatar-btn:hover, .avatar-btn:focus-visible { border-color: var(--primary); outline: none; }
         .btn-icon { background: none; border: none; font-size: 1.2rem; color: var(--text-muted); padding: 5px; }
         .btn-icon:hover { color: var(--primary); }
 
@@ -440,7 +442,7 @@
             </nav>
 
             <div class="user-profile">
-                <img src="" id="user-avatar-img" class="avatar">
+                <img src="" id="user-avatar-img" class="avatar avatar-btn" role="button" tabindex="0" alt="My profile" title="My profile" onclick="openProfile()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openProfile()}">
                 <button onclick="logout()" class="btn-icon" aria-label="Log out" title="Log out"><i class="ri-logout-box-r-line"></i></button>
             </div>
         </header>
@@ -468,31 +470,31 @@
 
                                         <div class="form-group">
                                             <label>Japa Session (before 7am)</label>
-                                            <input type="number" id="e-rounds-session" class="input-std" placeholder="Rounds in the Japa Session" min="0">
+                                            <input type="number" id="e-rounds-session" class="input-std" placeholder="Rounds in the Japa Session" min="0" step="1" inputmode="numeric">
                                         </div>
                                         <div class="form-group">
                                             <label>Japa — before 7am</label>
-                                            <input type="number" id="e-rounds-early" class="input-std" placeholder="Rounds before 7am" min="0">
+                                            <input type="number" id="e-rounds-early" class="input-std" placeholder="Rounds before 7am" min="0" step="1" inputmode="numeric">
                                         </div>
                                         <div class="form-group">
                                             <label>Japa — 7 to 9am</label>
-                                            <input type="number" id="e-rounds-mid" class="input-std" placeholder="Rounds 7–9am" min="0">
+                                            <input type="number" id="e-rounds-mid" class="input-std" placeholder="Rounds 7–9am" min="0" step="1" inputmode="numeric">
                                         </div>
                                         <div class="form-group">
                                             <label>Japa — after 9am</label>
-                                            <input type="number" id="e-rounds-late" class="input-std" placeholder="Rounds after 9am" min="0">
+                                            <input type="number" id="e-rounds-late" class="input-std" placeholder="Rounds after 9am" min="0" step="1" inputmode="numeric">
                                         </div>
                                         <div class="form-group">
                                             <label>Reading</label>
-                                            <input type="number" id="e-read" class="input-std" placeholder="Minutes read" min="0">
+                                            <input type="number" id="e-read" class="input-std" placeholder="Minutes read" min="0" step="1" inputmode="numeric">
                                         </div>
                                         <div class="form-group">
                                             <label>Lecture</label>
-                                            <input type="number" id="e-lec" class="input-std" placeholder="Minutes of lecture" min="0">
+                                            <input type="number" id="e-lec" class="input-std" placeholder="Minutes of lecture" min="0" step="1" inputmode="numeric">
                                         </div>
                                         <div class="form-group">
                                             <label>Seva / Service</label>
-                                            <input type="number" id="e-seva" class="input-std" placeholder="Minutes of service" min="0">
+                                            <input type="number" id="e-seva" class="input-std" placeholder="Minutes of service" min="0" step="1" inputmode="numeric">
                                         </div>
                                         <button type="submit" class="btn-primary" style="width:100%;">Save Sādhana</button>
                                         </form>
@@ -606,7 +608,7 @@
                         </div>
 
                         <div class="card">
-                            <h2>Profile & Data</h2>
+                            <h2 id="profile-section">Profile & Data</h2>
 
                             <div class="form-group">
                                 <label>Account</label>
@@ -772,6 +774,19 @@
             return data;
         }
 
+        // Make any user-typed text safe to put inside HTML.
+        function esc(x) {
+            return String(x == null ? '' : x)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+        // Browser's UTC offset in minutes (Toronto = 300), so the server
+        // counts weeks in the devotee's own timezone.
+        function tzOffset() { return new Date().getTimezoneOffset(); }
+        function ymdLocal(d) {
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
         const CACHE = { logs: [], journal: [], leaderboard: [], users: [] };
         let PENDING_CHANGE = null;
 
@@ -784,7 +799,7 @@
         }
 
         function refreshLeaderboardAndRender() {
-            return api('/api/leaderboard').then(d => {
+            return api('/api/leaderboard?tz=' + tzOffset()).then(d => {
                 CACHE.leaderboard = d || [];
                 if (CURRENT_USER && !document.getElementById('view-overview').classList.contains('hidden')) {
                     updateDashboard();
@@ -797,7 +812,7 @@
             const tasks = [
                 api('/api/logs').then(d => { CACHE.logs = d || []; }),
                 api('/api/journal').then(d => { CACHE.journal = d || []; }),
-                api('/api/leaderboard').then(d => { CACHE.leaderboard = d || []; })
+                api('/api/leaderboard?tz=' + tzOffset()).then(d => { CACHE.leaderboard = d || []; })
             ];
             if (user.role === 'admin' || user.role === 'root') {
                 tasks.push(api('/api/admin/users').then(d => { CACHE.users = d || []; }));
@@ -820,11 +835,16 @@
                         date: logEntry.date,
                         roundsSession: logEntry.roundsSession,
                         roundsEarly: logEntry.roundsEarly, roundsMid: logEntry.roundsMid, roundsLate: logEntry.roundsLate,
-                        reading: logEntry.reading, lecture: logEntry.lecture, service: logEntry.service
+                        reading: logEntry.reading, lecture: logEntry.lecture, service: logEntry.service,
+                        tzOffset: tzOffset()
                     }).then(saved => {
                         const i2 = CACHE.logs.findIndex(l => l.date === saved.date);
                         if (i2 > -1) CACHE.logs[i2] = saved;
                         return refreshLeaderboardAndRender();
+                    }).catch(err => {
+                        // Put the screen back in sync with what was really saved
+                        api('/api/logs').then(d => { CACHE.logs = d || []; if (CURRENT_USER) updateDashboard(); }).catch(() => {});
+                        throw err;
                     }),
                     'Could not save entry'
                 );
@@ -913,7 +933,7 @@
 
         function authLogin() {
             const u = document.getElementById('l-user').value.trim();
-            const p = document.getElementById('l-pass').value.trim();
+            const p = document.getElementById('l-pass').value;
             const errEl = document.getElementById('login-err');
 
             if(!u || !p) {
@@ -941,11 +961,21 @@
             const last = document.getElementById('r-last').value.trim();
             const email = document.getElementById('r-email').value.trim();
             const u = document.getElementById('r-user').value.trim();
-            const p = document.getElementById('r-pass').value.trim();
+            const p = document.getElementById('r-pass').value;
             const errEl = document.getElementById('reg-err');
 
             if(!first || !last || !u || !p || !email) {
                 errEl.innerText = "First name, last name, username, email & password are all required.";
+                errEl.style.display = 'block';
+                return;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                errEl.innerText = "Please enter a valid email address.";
+                errEl.style.display = 'block';
+                return;
+            }
+            if (p.length < 8) {
+                errEl.innerText = "Password must be at least 8 characters.";
                 errEl.style.display = 'block';
                 return;
             }
@@ -996,13 +1026,34 @@
                 .catch(err => alert(err.message || "Invalid Code or Password."));
         }
 
+        function resetAuthForms() {
+            setBtnBusy('login-btn', false);
+            setBtnBusy('reg-btn', false);
+            ['l-user','l-pass','r-first','r-last','r-email','r-user','r-pass','f-email','f-code','f-newpass'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.value = '';
+            });
+            // Hide any password that was left visible
+            document.querySelectorAll('.pw-toggle').forEach(btn => {
+                const input = btn.parentElement.querySelector('input');
+                if (input && input.type === 'text') togglePassword(input.id, btn);
+            });
+            document.getElementById('forgot-step-1').classList.remove('hidden');
+            document.getElementById('forgot-step-2').classList.add('hidden');
+        }
+
         function logout() {
             api('/api/logout', 'POST').catch(() => {});
             CURRENT_USER = null;
             CACHE.logs = []; CACHE.journal = []; CACHE.leaderboard = []; CACHE.users = [];
+            ['log-entry-modal','date-picker-modal','admin-view-modal'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.classList.add('hidden');
+            });
+            cancelSecurity();
+            document.getElementById('journal-text').value = '';
             document.getElementById('app-interface').classList.add('hidden');
             document.getElementById('landing-page').classList.remove('hidden');
             document.body.className = '';
+            resetAuthForms();
             toggleAuth('login');
         }
 
@@ -1021,9 +1072,19 @@
             document.body.className = `${user.themeMode === 'dark' ? 'dark-mode' : ''} theme-${user.colorTheme || 'saffron'}`;
             
             // Init components
+            resetAuthForms();
             initDatePicker();
-            updateDashboard();
+            const overviewBtn = document.querySelector('.nav-btn[onclick*="\'overview\'"]');
+            switchView('overview', overviewBtn);   // also renders the dashboard
+            document.querySelector('.main-content').scrollTop = 0;
             updateAccountInfoBlock();
+        }
+
+        function openProfile() {
+            const settingsBtn = document.querySelector('.nav-btn[onclick*="\'settings\'"]');
+            switchView('settings', settingsBtn);
+            const sec = document.getElementById('profile-section');
+            if (sec) setTimeout(() => sec.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
         }
 
         function switchView(viewId, btn) {
@@ -1378,14 +1439,16 @@
 
             // Overwrite / Lock Check
             const existingLog = DB.getUserLogs(CURRENT_USER.username).find(l => l.date === date);
-            const weekStart = getWeekStart();
-            const entryDateObj = new Date(date);
-            
-            // Normalize time for comparison
-            entryDateObj.setHours(0,0,0,0);
+            const weekStart = getWeekStart();   // 'YYYY-MM-DD' (local Sunday)
+            const todayStr = ymdLocal(new Date());
+
+            if (date > todayStr) {
+                alert("You can't log sādhana for a future date.");
+                return;
+            }
 
             if (existingLog) {
-                if (entryDateObj < weekStart) {
+                if (date < weekStart) {
                     alert("🔒 History Locked: You cannot edit entries from previous weeks.");
                     return;
                 }
@@ -1393,7 +1456,7 @@
                     return;
                 }
                 // If confirmed (or editing this exact entry), logic proceeds to addLog which overwrites in DB
-            } else if (entryDateObj < weekStart) {
+            } else if (date < weekStart) {
                  if (!confirm("⚠️ You are adding data to a past week. Proceed?")) return;
             }
 
@@ -1460,13 +1523,12 @@
 
         // --- DASHBOARD RENDERER ---
         
+        // Most recent Sunday in the devotee's local time, as 'YYYY-MM-DD'
         function getWeekStart() {
-            const now = new Date();
-            const day = now.getDay(); 
-            const diff = now.getDate() - day; 
-            const sunday = new Date(now.setDate(diff));
-            sunday.setHours(0,0,0,0);
-            return sunday;
+            const d = new Date();
+            d.setHours(12, 0, 0, 0);
+            d.setDate(d.getDate() - d.getDay());
+            return ymdLocal(d);
         }
 
         function updateDashboard() {
@@ -1475,7 +1537,7 @@
             // 1. History List
             const listEl = document.getElementById('log-list');
             listEl.innerHTML = '';
-            myLogs.sort((a,b) => new Date(b.date) - new Date(a.date));
+            myLogs.sort((a,b) => b.date.localeCompare(a.date));
             myLogs.forEach(log => {
                 listEl.innerHTML += `
                     <div class="list-item">
@@ -1493,7 +1555,7 @@
 
             // 2. Weekly Calc
             const weekStart = getWeekStart();
-            const weeklyLogs = myLogs.filter(l => { const d = new Date(l.date); return d >= weekStart; });
+            const weeklyLogs = myLogs.filter(l => l.date >= weekStart);
             const weeklyScore = weeklyLogs.reduce((acc, cur) => acc + cur.score, 0);
             
             document.getElementById('txt-weekly').innerText = `${weeklyScore}/700`;
@@ -1522,7 +1584,7 @@
                     <div class="list-item">
                         <div style="display:flex; align-items:center;">
                             <div class="rank-circle ${rankClass}">${i+1}</div>
-                            <span style="font-weight:600">${d.displayName}</span>
+                            <span style="font-weight:600">${esc(d.displayName)}</span>
                         </div>
                         <span class="lb-score-val">${d.score}</span>
                     </div>`;
@@ -1625,7 +1687,7 @@
             }
 
             // 4. Trend Line
-            const trendData = [...myLogs].sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(-21);
+            const trendData = [...myLogs].sort((a,b)=>a.date.localeCompare(b.date)).slice(-21);
             const scores = trendData.map(l => l.score);
             const dates = trendData.map(l => l.date.substring(5));
             const sma = scores.map((val, idx, arr) => {
@@ -1705,7 +1767,10 @@
                   }).join('')
                 : `<div style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:1rem;">No entries yet this year.</div>`;
 
-            if(!scores.length) return;
+            if(!scores.length) {
+                if (CHART_STORE['chart-hist']) { CHART_STORE['chart-hist'].destroy(); delete CHART_STORE['chart-hist']; }
+                return;
+            }
 
             // Score distribution histogram
             const bins = [0,0,0,0,0];
@@ -1742,7 +1807,7 @@
                     <div class="list-item" style="align-items:flex-start;">
                         <div style="flex:1; padding-right:0.5rem;">
                             <div style="font-weight:600">${j.date}</div>
-                            <div style="font-size:0.8rem; color:var(--text-muted); white-space:pre-wrap;">${preview.replace(/</g,'&lt;')}</div>
+                            <div style="font-size:0.8rem; color:var(--text-muted); white-space:pre-wrap;">${esc(preview)}</div>
                         </div>
                         <div style="display:flex; gap:8px; flex-shrink:0;">
                             <button type="button" onclick="editJournalEntry('${j.date}')" title="Edit reflection" style="background:none; border:none; font-size:0.95rem; cursor:pointer; padding:2px;">✏️</button>
@@ -1912,9 +1977,8 @@
         // --- ADMIN ---
         async function loadReports() {
             let data;
-            try { data = await api('/api/admin/reports'); }
+            try { data = await api('/api/admin/reports?tz=' + tzOffset()); }
             catch (err) { console.error(err); return; }
-            const esc = (x) => String(x == null ? '' : x).replace(/</g, '&lt;');
             const body = (rows) => (rows && rows.length)
                 ? rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.displayName)}</td><td><span class="score-badge">${r.score}</span></td></tr>`).join('')
                 : `<tr><td colspan="3" style="color:var(--text-muted);text-align:center;padding:1rem;">No entries yet</td></tr>`;
@@ -1938,8 +2002,9 @@
                 let actions = '';
                 const canManage = (CURRENT_USER.role === 'root') || (CURRENT_USER.role === 'admin' && u.role === 'user');
 
-                actions += `<button onclick="viewUserEntries('${u.username}')" style="color:#2563EB;margin-right:5px;border:none;background:none;font-size:0.8rem;">Entries</button>`;
-                actions += `<button onclick="viewUserJournal('${u.username}')" style="color:#7C3AED;margin-right:5px;border:none;background:none;font-size:0.8rem;">Journal</button>`;
+                const uname = esc(JSON.stringify(u.username));
+                actions += `<button onclick="viewUserEntries(${uname})" style="color:#2563EB;margin-right:5px;border:none;background:none;font-size:0.8rem;">Entries</button>`;
+                actions += `<button onclick="viewUserJournal(${uname})" style="color:#7C3AED;margin-right:5px;border:none;background:none;font-size:0.8rem;">Journal</button>`;
 
                 if(canManage && u.username !== CURRENT_USER.username) {
                     if(u.role === 'user' && adminCount < 19) actions += `<button onclick="promoteUser(${u.id})" style="color:blue;margin-right:5px;border:none;background:none;font-size:0.8rem;">Promote</button>`;
@@ -1947,7 +2012,7 @@
                     actions += `<button onclick="resetPass(${u.id})" style="color:green;margin-right:5px;border:none;background:none;font-size:0.8rem;">Reset PW</button>`;
                     actions += `<button onclick="deleteUser(${u.id})" style="color:red;border:none;background:none;font-size:0.8rem;">Delete</button>`;
                 }
-                tbody.innerHTML += `<tr><td><div style="display:flex;align-items:center;gap:10px;"><img src="${u.avatar}" style="width:30px;height:30px;border-radius:50%"> <div><div style="font-weight:700;">${fullName(u)}</div><div style="font-size:0.72rem;color:var(--text-muted);">@${u.username}</div></div></div></td><td>${u.email||'-'}</td><td><span class="badge ${badge}">${roleTxt}</span></td><td>${actions}</td></tr>`;
+                tbody.innerHTML += `<tr><td><div style="display:flex;align-items:center;gap:10px;"><img src="${esc(u.avatar)}" style="width:30px;height:30px;border-radius:50%"> <div><div style="font-weight:700;">${esc(fullName(u))}</div><div style="font-size:0.72rem;color:var(--text-muted);">@${esc(u.username)}</div></div></div></td><td>${esc(u.email||'-')}</td><td><span class="badge ${badge}">${roleTxt}</span></td><td>${actions}</td></tr>`;
             });
         }
 
@@ -2013,7 +2078,7 @@
                 body.innerHTML = entries.map(j => `
                     <div style="padding:0.8rem 0; border-bottom:1px solid var(--border);">
                         <div style="font-weight:700; font-size:0.85rem; margin-bottom:4px;">${j.date}</div>
-                        <div style="font-size:0.85rem; color:var(--text-main); white-space:pre-wrap;">${(j.text || '').replace(/</g,'&lt;')}</div>
+                        <div style="font-size:0.85rem; color:var(--text-main); white-space:pre-wrap;">${esc(j.text || '')}</div>
                     </div>`).join('');
             }
             document.getElementById('admin-view-modal').classList.remove('hidden');

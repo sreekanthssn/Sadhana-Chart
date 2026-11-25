@@ -150,12 +150,26 @@ function computeScore(session, early, mid, late, reading, lecture, service) {
   return Math.min(score, 100);
 }
 
-// Start of the current week (most recent Sunday, midnight UTC).
-function getWeekStartUTC() {
-  const now = new Date();
-  const day = now.getUTCDay();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - day));
+// Start of the current week (most recent Sunday) in the devotee's own timezone.
+// tzOffset is the browser's Date.getTimezoneOffset() in minutes (Toronto = 300).
+// Returns a 'YYYY-MM-DD' string so it can be compared directly with log dates.
+function parseTzOffset(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(-840, Math.min(720, Math.round(n)));
 }
+function getWeekStartStr(tzOffset = 0) {
+  const local = new Date(Date.now() - parseTzOffset(tzOffset) * 60000); // UTC fields now hold local time
+  const start = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() - local.getUTCDay()));
+  return start.toISOString().slice(0, 10);
+}
+
+// Whole, non-negative numbers only, with a sane upper limit.
+function cleanCount(v, max) {
+  const n = Math.floor(Number(v) || 0);
+  return Math.max(0, Math.min(max, n));
+}
+function normEmail(e) { return String(e || '').trim().toLowerCase(); }
 
 // Generate a 6-digit code, store its hash, and return the plain code to email.
 async function issueCode(userId, purpose) {
@@ -204,15 +218,20 @@ function shapeLog(r) {
 // ============================================================
 app.post('/api/signup', async (req, res) => {
   try {
-    const { firstName, lastName, username, password, email } = req.body;
+    const { firstName, lastName, password } = req.body;
+    const username = String(req.body.username || '').trim();
+    const email = normEmail(req.body.email);
     if (!username || !password || !email) {
       return res.status(400).json({ error: 'Username, email and password are required' });
     }
     if (password.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Please enter a valid email address' });
+    }
     const dupe = await pool.query(
-      'SELECT id FROM users WHERE username = $1 OR email = $2',
+      'SELECT id FROM users WHERE LOWER(username) = LOWER($1) OR LOWER(email) = $2',
       [username, email]
     );
     if (dupe.rows.length) {
@@ -267,13 +286,13 @@ app.get('/api/me', requireAuth, async (req, res) => {
 
 app.post('/api/forgot-password', async (req, res) => {
   try {
-    const { email } = req.body;
-    const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const email = normEmail(req.body.email);
+    const { rows } = await pool.query('SELECT * FROM users WHERE LOWER(email) = $1', [email]);
     // Respond the same way whether or not the email exists, so we don't
     // reveal which addresses are registered.
     if (rows.length) {
       const code = await issueCode(rows[0].id, 'password_reset');
-      await sendCodeEmail(email, 'Your Varenium password reset code', code);
+      await sendCodeEmail(rows[0].email, 'Your Varenium password reset code', code);
     }
     res.json({ ok: true });
   } catch (err) {
@@ -284,11 +303,12 @@ app.post('/api/forgot-password', async (req, res) => {
 
 app.post('/api/reset-password', async (req, res) => {
   try {
-    const { email, code, newPassword } = req.body;
+    const { code, newPassword } = req.body;
+    const email = normEmail(req.body.email);
     if (!newPassword || newPassword.length < 8) {
       return res.status(400).json({ error: 'New password must be at least 8 characters' });
     }
-    const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const { rows } = await pool.query('SELECT * FROM users WHERE LOWER(email) = $1', [email]);
     const user = rows[0];
     if (!user) return res.status(400).json({ error: 'Invalid or expired code' });
     const valid = await findValidCode(user.id, 'password_reset', code);
@@ -317,18 +337,18 @@ app.get('/api/logs', requireAuth, async (req, res) => {
 
 app.post('/api/logs', requireAuth, async (req, res) => {
   try {
-    const { date, roundsSession = 0, roundsEarly = 0, roundsMid = 0, roundsLate = 0, reading = 0, lecture = 0, service = 0 } = req.body;
+    const { date, roundsSession = 0, roundsEarly = 0, roundsMid = 0, roundsLate = 0, reading = 0, lecture = 0, service = 0, tzOffset = 0 } = req.body;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) {
       return res.status(400).json({ error: 'A valid date (YYYY-MM-DD) is required' });
     }
-    const rs = Math.max(0, Number(roundsSession) || 0);
-    const re = Math.max(0, Number(roundsEarly) || 0);
-    const rm = Math.max(0, Number(roundsMid) || 0);
-    const rl = Math.max(0, Number(roundsLate) || 0);
+    const rs = cleanCount(roundsSession, 200);
+    const re = cleanCount(roundsEarly, 200);
+    const rm = cleanCount(roundsMid, 200);
+    const rl = cleanCount(roundsLate, 200);
     const r = rs + re + rm + rl;
-    const rd = Math.max(0, Number(reading) || 0);
-    const l = Math.max(0, Number(lecture) || 0);
-    const s = Math.max(0, Number(service) || 0);
+    const rd = cleanCount(reading, 1440);
+    const l = cleanCount(lecture, 1440);
+    const s = cleanCount(service, 1440);
     const score = computeScore(rs, re, rm, rl, rd, l, s);
 
     // Server-side "history locked": block edits to an existing entry from a past week.
@@ -336,8 +356,7 @@ app.post('/api/logs', requireAuth, async (req, res) => {
       'SELECT id FROM logs WHERE user_id = $1 AND log_date = $2',
       [req.session.userId, date]
     );
-    const entryDate = new Date(date + 'T00:00:00Z');
-    if (existing.rows.length && entryDate < getWeekStartUTC()) {
+    if (existing.rows.length && date < getWeekStartStr(tzOffset)) {
       return res.status(403).json({ error: 'History locked: entries from previous weeks cannot be edited' });
     }
 
@@ -404,7 +423,7 @@ app.delete('/api/journal/:date', requireAuth, async (req, res) => {
 //  LEADERBOARD  (weekly score totals, visible to all logged-in users)
 // ============================================================
 app.get('/api/leaderboard', requireAuth, async (req, res) => {
-  const weekStart = getWeekStartUTC().toISOString().slice(0, 10); // YYYY-MM-DD
+  const weekStart = getWeekStartStr(req.query.tz); // YYYY-MM-DD, viewer's local week
   const { rows } = await pool.query(
     `SELECT u.username,
             COALESCE(NULLIF(TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')), ''), u.username) AS "displayName",
@@ -441,7 +460,7 @@ app.get('/api/admin/reports', requireAdmin, async (req, res) => {
     return rows;
   }
 
-  const weekStart = getWeekStartUTC().toISOString().slice(0, 10);
+  const weekStart = getWeekStartStr(req.query.tz);
   const weekly  = await board(`l.log_date >= $1`, [weekStart], 10);
   const monthly = await board(
     `l.log_date >= date_trunc('month', CURRENT_DATE) AND l.log_date < date_trunc('month', CURRENT_DATE) + interval '1 month'`, [], null);
@@ -484,13 +503,14 @@ app.patch('/api/me', requireAuth, async (req, res) => {
 // email currently on file.
 app.post('/api/me/request-change', requireAuth, async (req, res) => {
   try {
-    const { type, newValue } = req.body;
+    const { type } = req.body;
+    const newValue = type === 'email' ? normEmail(req.body.newValue) : String(req.body.newValue || '').trim();
     if (!['email', 'username'].includes(type) || !newValue) {
       return res.status(400).json({ error: 'type must be "email" or "username", with a newValue' });
     }
     const me = await getUserById(req.session.userId);
     const column = type === 'email' ? 'email' : 'username';
-    const taken = await pool.query(`SELECT id FROM users WHERE ${column} = $1 AND id <> $2`, [newValue, me.id]);
+    const taken = await pool.query(`SELECT id FROM users WHERE LOWER(${column}) = LOWER($1) AND id <> $2`, [newValue, me.id]);
     if (taken.rows.length) return res.status(409).json({ error: `That ${type} is already in use` });
 
     const purpose = type === 'email' ? 'email_change' : 'username_change';
@@ -507,7 +527,8 @@ app.post('/api/me/request-change', requireAuth, async (req, res) => {
 // Sensitive change: step 2, confirm the code and apply the change.
 app.post('/api/me/confirm-change', requireAuth, async (req, res) => {
   try {
-    const { type, newValue, code } = req.body;
+    const { type, code } = req.body;
+    const newValue = type === 'email' ? normEmail(req.body.newValue) : String(req.body.newValue || '').trim();
     if (!['email', 'username'].includes(type) || !newValue) {
       return res.status(400).json({ error: 'Bad request' });
     }
@@ -527,7 +548,7 @@ app.post('/api/me/confirm-change', requireAuth, async (req, res) => {
     if (!valid) return res.status(400).json({ error: 'Invalid or expired code' });
 
     const column = type === 'email' ? 'email' : 'username';
-    const taken = await pool.query(`SELECT id FROM users WHERE ${column} = $1 AND id <> $2`, [newValue, me.id]);
+    const taken = await pool.query(`SELECT id FROM users WHERE LOWER(${column}) = LOWER($1) AND id <> $2`, [newValue, me.id]);
     if (taken.rows.length) return res.status(409).json({ error: `That ${type} is already in use` });
 
     if (type === 'email') {
