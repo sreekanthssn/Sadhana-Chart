@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#111827">
     <title>Varenium | Pro 2.0</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
@@ -46,7 +47,7 @@
         body.dark-mode.theme-teal { --primary: #2DD4BF; }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg-body); color: var(--text-main); height: 100vh; overflow: hidden; transition: background 0.3s, color 0.3s; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-body); color: var(--text-main); height: 100vh; height: 100dvh; overflow: hidden; transition: background 0.3s, color 0.3s; }
         button { cursor: pointer; font-family: inherit; }
         .hidden { display: none !important; }
 
@@ -227,26 +228,89 @@
         @keyframes btnspin { to { transform: rotate(360deg); } }
         button[disabled] { opacity: 0.75; cursor: default; }
 
-        /* --- MOBILE LAYOUT --- */
-        @media (max-width: 768px) {
-            .toolbar { padding: 0 1rem; height: auto; flex-wrap: wrap; gap: 0.5rem; padding-top: 0.6rem; padding-bottom: 0.6rem; }
-            .logo { font-size: 1.25rem; width: 100%; text-align: center; }
-            .nav-tabs { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; justify-content: flex-start; flex-wrap: nowrap; }
-            .nav-tabs::-webkit-scrollbar { display: none; }
-            .nav-btn { padding: 0.5rem 0.9rem; font-size: 0.85rem; white-space: nowrap; flex: 0 0 auto; }
-            .main-content { padding: 1rem; }
-            .dashboard-grid { grid-template-columns: 1fr; gap: 1rem; }
-            .stats-row { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
-            .hero-title { font-size: 2.5rem; }
-            .landing-content { max-width: 100%; }
-            .auth-box { padding: 1.25rem; }
-            .chart-wrapper, .chart-wrapper-lg { height: 220px; }
-            .card { padding: 1rem; }
+        /* --- PASSWORD EYE TOGGLE --- */
+        .pw-wrap { position: relative; margin-bottom: 1rem; }
+        .pw-wrap .pw-input { margin-bottom: 0; padding-right: 2.9rem; }
+        .pw-toggle { position: absolute; top: 50%; right: 4px; transform: translateY(-50%); width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: none; border: none; color: #9CA3AF; font-size: 1.15rem; border-radius: 6px; }
+        .pw-toggle:hover, .pw-toggle:focus-visible { color: #FB923C; outline: none; }
+
+        /* --- SHARED GRID HELPERS --- */
+        .overview-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-content: start; }
+        .span-2 { grid-column: span 2; }
+        .dashboard-grid.two-col { grid-template-columns: 1fr 1fr; }
+        .leaderboard-box { height: 250px; }
+        .nav-btn i { margin-right: 6px; font-size: 1rem; vertical-align: -2px; }
+
+        /* --- TABLET --- */
+        @media (max-width: 1024px) {
+            .dashboard-grid.two-col { grid-template-columns: 1fr; }
         }
-        @media (max-width: 420px) {
-            .stats-row { grid-template-columns: 1fr 1fr; }
-            .hero-title { font-size: 2.1rem; }
-            .nav-btn { padding: 0.45rem 0.75rem; font-size: 0.8rem; }
+
+        /* --- MOBILE LAYOUT (app-style: slim top bar + bottom tab bar) --- */
+        @media (max-width: 768px) {
+            .toolbar { height: 56px; padding: 0 1rem; padding-top: env(safe-area-inset-top); height: calc(56px + env(safe-area-inset-top)); }
+            .logo { font-size: 1.3rem; }
+            .user-profile { gap: 0.5rem; }
+            .avatar { width: 32px; height: 32px; }
+
+            .nav-tabs {
+                position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000;
+                display: flex; gap: 0; padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+                background: var(--bg-nav); border-top: 1px solid var(--border); border-radius: 0;
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.06);
+            }
+            .nav-btn {
+                flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+                gap: 2px; padding: 6px 2px; font-size: 0.68rem; font-weight: 600; border-radius: 10px; min-height: 52px;
+            }
+            .nav-btn i { margin: 0; font-size: 1.35rem; }
+            .nav-btn.active { background: rgba(var(--primary-rgb), 0.1); box-shadow: none; }
+
+            .main-content { padding: 1rem 0.85rem; padding-bottom: calc(84px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; }
+            .dashboard-grid, .dashboard-grid.two-col, .overview-charts { grid-template-columns: 1fr; gap: 1rem; }
+            .grid-col-left { gap: 1rem; }
+            .span-2 { grid-column: auto; }
+            .card { padding: 1rem; border-radius: 14px; }
+            .card h2 { font-size: 0.95rem; margin-bottom: 0.75rem; }
+            .chart-wrapper { height: 230px; }
+            .chart-wrapper-lg { height: 240px; }
+            .leaderboard-box { height: auto; max-height: 320px; }
+            .list-fill { max-height: 360px; }
+            #view-stats > .card, #view-admin > .card { margin-bottom: 1rem; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+
+            /* 16px inputs stop iPhone Safari from zooming in on focus */
+            input, select, textarea, .input-std, .input-dark { font-size: 16px; }
+            .btn-primary, .btn-outline, .btn-landing { min-height: 46px; }
+            .toggle-row { gap: 1rem; }
+            .toggle-row span { font-size: 0.9rem; }
+            .toggle-switch { flex-shrink: 0; }
+            input[type="file"] { max-width: 100%; font-size: 0.8rem; }
+
+            .admin-table th, .admin-table td { padding: 0.6rem 0.5rem; font-size: 0.85rem; }
+
+            /* Log entry form becomes a bottom sheet */
+            #log-entry-modal { align-items: flex-end; padding: 0; }
+            .log-entry-sheet {
+                width: 100% !important; max-width: 100% !important; max-height: 92dvh !important;
+                border-radius: 18px 18px 0 0 !important; padding-bottom: calc(1.4rem + env(safe-area-inset-bottom)) !important;
+                animation: iosSheetUp 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
+            }
+            #admin-view-modal .wheel-picker-card { width: 100% !important; max-width: 94vw !important; max-height: 88dvh; overflow-y: auto; }
+
+            /* Landing / login */
+            #landing-page { padding: 1.25rem 1rem; padding-top: calc(1.25rem + env(safe-area-inset-top)); align-items: flex-start; }
+            .landing-content { max-width: 100%; margin-top: 6vh; }
+            .hero-title { font-size: 2.6rem; }
+            .auth-box { padding: 1.25rem; }
+            .auth-tab { padding: 0.8rem; }
+            .name-row > input { min-width: 0; }
+        }
+        @media (max-width: 380px) {
+            .nav-btn { font-size: 0.62rem; }
+            .stat-num { font-size: 1.25rem; }
+            .hero-title { font-size: 2.2rem; }
+            .name-row { flex-direction: column; }
         }
 
         /* --- INPUTS --- */
@@ -315,21 +379,27 @@
                 
                 <div id="form-login">
                     <input type="text" id="l-user" class="input-dark" placeholder="Username or Email" onkeyup="if(event.key==='Enter') authLogin()">
-                    <input type="password" id="l-pass" class="input-dark" placeholder="Password" onkeyup="if(event.key==='Enter') authLogin()">
+                    <div class="pw-wrap">
+                        <input type="password" id="l-pass" class="input-dark pw-input" placeholder="Password" onkeyup="if(event.key==='Enter') authLogin()">
+                        <button type="button" class="pw-toggle" onmousedown="event.preventDefault()" onclick="togglePassword('l-pass', this)" aria-label="Show password" title="Show password"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    </div>
                     <button id="login-btn" onclick="authLogin()" class="btn-landing">Enter</button>
                     <div id="login-err" class="err-msg" style="text-align: center;"></div>
                     <div class="link-forgot" onclick="toggleAuth('forgot')">Forgot Password?</div>
                 </div>
 
                 <div id="form-reg" class="hidden">
-                    <div style="display:flex; gap:10px;">
+                    <div class="name-row" style="display:flex; gap:10px;">
                         <input type="text" id="r-first" class="input-dark" placeholder="First Name" style="margin-bottom:0;">
                         <input type="text" id="r-last" class="input-dark" placeholder="Last Name" style="margin-bottom:0;">
                     </div>
                     <div style="height:1rem;"></div>
                     <input type="email" id="r-email" class="input-dark" placeholder="Email (Unique)">
                     <input type="text" id="r-user" class="input-dark" placeholder="Choose Username (Unique)">
-                    <input type="password" id="r-pass" class="input-dark" placeholder="Password">
+                    <div class="pw-wrap">
+                        <input type="password" id="r-pass" class="input-dark pw-input" placeholder="Password">
+                        <button type="button" class="pw-toggle" onmousedown="event.preventDefault()" onclick="togglePassword('r-pass', this)" aria-label="Show password" title="Show password"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    </div>
                     <button id="reg-btn" onclick="authRegister()" class="btn-landing">Create Account</button>
                     <div id="reg-err" class="err-msg" style="text-align: center;"></div>
                 </div>
@@ -342,7 +412,10 @@
                     </div>
                     <div id="forgot-step-2" class="hidden">
                         <input type="number" id="f-code" class="input-dark" placeholder="6-Digit Code">
-                        <input type="password" id="f-newpass" class="input-dark" placeholder="New Password">
+                        <div class="pw-wrap">
+                        <input type="password" id="f-newpass" class="input-dark pw-input" placeholder="New Password">
+                        <button type="button" class="pw-toggle" onmousedown="event.preventDefault()" onclick="togglePassword('f-newpass', this)" aria-label="Show password" title="Show password"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    </div>
                         <button onclick="confirmResetPass()" class="btn-landing">Reset Password</button>
                     </div>
                     <div class="link-forgot" onclick="toggleAuth('login')">Back to Login</div>
@@ -359,16 +432,16 @@
             <div class="logo">Varenium</div>
             
             <nav class="nav-tabs">
-                <button class="nav-btn active" onclick="switchView('overview', this)">Overview</button>
-                <button class="nav-btn" onclick="switchView('stats', this)">Progress</button>
-                <button class="nav-btn" onclick="switchView('journals', this)">Journals</button>
-                <button class="nav-btn" onclick="switchView('settings', this)">Settings</button>
-                <button class="nav-btn hidden" id="nav-admin" onclick="switchView('admin', this)">Admin</button>
+                <button class="nav-btn active" onclick="switchView('overview', this)"><i class="ri-home-5-line"></i><span>Overview</span></button>
+                <button class="nav-btn" onclick="switchView('stats', this)"><i class="ri-bar-chart-2-line"></i><span>Progress</span></button>
+                <button class="nav-btn" onclick="switchView('journals', this)"><i class="ri-book-open-line"></i><span>Journals</span></button>
+                <button class="nav-btn" onclick="switchView('settings', this)"><i class="ri-settings-3-line"></i><span>Settings</span></button>
+                <button class="nav-btn hidden" id="nav-admin" onclick="switchView('admin', this)"><i class="ri-shield-user-line"></i><span>Admin</span></button>
             </nav>
 
             <div class="user-profile">
                 <img src="" id="user-avatar-img" class="avatar">
-                <button onclick="logout()" class="btn-icon"><i class="ri-logout-box-r-line"></i></button>
+                <button onclick="logout()" class="btn-icon" aria-label="Log out" title="Log out"><i class="ri-logout-box-r-line"></i></button>
             </div>
         </header>
 
@@ -383,7 +456,7 @@
                                 <button type="button" class="btn-primary" style="width:100%; font-size:1rem;" onclick="openLogEntryForm()">📝 Log Entry</button>
 
                                 <div id="log-entry-modal" class="hidden">
-                                    <div class="wheel-picker-card" style="width:380px; max-width:92vw; text-align:left; max-height:88vh; overflow-y:auto;">
+                                    <div class="wheel-picker-card log-entry-sheet" style="width:380px; max-width:92vw; text-align:left; max-height:88vh; overflow-y:auto;">
                                         <div class="wheel-picker-title" style="text-align:left; margin-bottom:0.75rem;">📝 Log Entry</div>
                                         <form onsubmit="submitEntry(event)">
 
@@ -434,7 +507,7 @@
                             </div>
                         </div>
 
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-content: start;">
+                        <div class="overview-charts">
                             
                             <div class="card">
                                 <h2>Weekly Goal</h2>
@@ -453,7 +526,7 @@
 
                             <div class="card">
                                 <h2>Leaderboard (Week)</h2>
-                                <div id="leaderboard-list" class="list-container" style="height: 250px;"></div>
+                                <div id="leaderboard-list" class="list-container leaderboard-box"></div>
                             </div>
 
                             <div class="card">
@@ -463,7 +536,7 @@
                                 </div>
                             </div>
 
-                            <div class="card" style="grid-column: span 2;">
+                            <div class="card span-2">
                                 <h2>Consistency Trend</h2>
                                 <div class="chart-wrapper-lg">
                                     <canvas id="chart-trend"></canvas>
@@ -479,7 +552,7 @@
                         <h2><span id="monthly-head">Monthly Progress</span></h2>
                         <div id="monthly-list" class="list-container" style="max-height:320px;"></div>
                     </div>
-                    <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
+                    <div class="dashboard-grid two-col">
                         <div class="card">
                             <h2>Score Distribution</h2>
                             <div class="chart-wrapper-lg">
@@ -496,7 +569,7 @@
                 </div>
 
                 <div id="view-settings" class="hidden">
-                    <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
+                    <div class="dashboard-grid two-col">
                         
                         <div class="card">
                             <h2>Interface Preferences</h2>
@@ -584,7 +657,7 @@
                 </div>
 
                 <div id="view-journals" class="hidden">
-                    <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
+                    <div class="dashboard-grid two-col">
                         <div class="card">
                             <h2>📔 Write a Reflection</h2>
                             <label>Date</label>
@@ -810,6 +883,19 @@
             document.getElementById('form-login').classList.toggle('hidden', mode!=='login');
             document.getElementById('form-reg').classList.toggle('hidden', mode!=='reg');
             document.getElementById('form-forgot').classList.toggle('hidden', mode!=='forgot');
+        }
+
+        const PW_EYE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+        const PW_EYE_OFF = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-6.5 0-10-7-10-7a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 7 10 7a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="2" y1="2" x2="22" y2="22"/></svg>';
+        function togglePassword(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            btn.innerHTML = show ? PW_EYE_OFF : PW_EYE;
+            const label = show ? 'Hide password' : 'Show password';
+            btn.setAttribute('aria-label', label);
+            btn.title = label;
         }
 
         function setBtnBusy(btnId, busy, busyLabel) {
