@@ -237,10 +237,15 @@ app.post('/api/signup', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body;
-    const { rows } = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const identifier = (username || '').trim();
+    // Accept either a username or an email address (case-insensitive for email).
+    const { rows } = await pool.query(
+      'SELECT * FROM users WHERE username = $1 OR LOWER(email) = LOWER($1)',
+      [identifier]
+    );
     const user = rows[0];
     if (!user || !bcrypt.compareSync(password || '', user.password_hash)) {
-      return res.status(401).json({ error: 'Invalid username or password' });
+      return res.status(401).json({ error: 'Invalid login or password' });
     }
     req.session.userId = user.id;
     res.json(toClientUser(user));

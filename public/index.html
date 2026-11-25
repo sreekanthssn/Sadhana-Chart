@@ -223,6 +223,32 @@
             #date-picker-modal, .ios-sheet { animation: none; }
         }
 
+        .btn-spinner { display:inline-block; width:15px; height:15px; border:2px solid rgba(255,255,255,0.45); border-top-color:#fff; border-radius:50%; vertical-align:-2px; margin-right:8px; animation: btnspin 0.7s linear infinite; }
+        @keyframes btnspin { to { transform: rotate(360deg); } }
+        button[disabled] { opacity: 0.75; cursor: default; }
+
+        /* --- MOBILE LAYOUT --- */
+        @media (max-width: 768px) {
+            .toolbar { padding: 0 1rem; height: auto; flex-wrap: wrap; gap: 0.5rem; padding-top: 0.6rem; padding-bottom: 0.6rem; }
+            .logo { font-size: 1.25rem; width: 100%; text-align: center; }
+            .nav-tabs { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; justify-content: flex-start; flex-wrap: nowrap; }
+            .nav-tabs::-webkit-scrollbar { display: none; }
+            .nav-btn { padding: 0.5rem 0.9rem; font-size: 0.85rem; white-space: nowrap; flex: 0 0 auto; }
+            .main-content { padding: 1rem; }
+            .dashboard-grid { grid-template-columns: 1fr; gap: 1rem; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+            .hero-title { font-size: 2.5rem; }
+            .landing-content { max-width: 100%; }
+            .auth-box { padding: 1.25rem; }
+            .chart-wrapper, .chart-wrapper-lg { height: 220px; }
+            .card { padding: 1rem; }
+        }
+        @media (max-width: 420px) {
+            .stats-row { grid-template-columns: 1fr 1fr; }
+            .hero-title { font-size: 2.1rem; }
+            .nav-btn { padding: 0.45rem 0.75rem; font-size: 0.8rem; }
+        }
+
         /* --- INPUTS --- */
         .form-group { margin-bottom: 1rem; }
         label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.4rem; text-transform: uppercase; }
@@ -288,9 +314,9 @@
                 </div>
                 
                 <div id="form-login">
-                    <input type="text" id="l-user" class="input-dark" placeholder="Username" onkeyup="if(event.key==='Enter') authLogin()">
+                    <input type="text" id="l-user" class="input-dark" placeholder="Username or Email" onkeyup="if(event.key==='Enter') authLogin()">
                     <input type="password" id="l-pass" class="input-dark" placeholder="Password" onkeyup="if(event.key==='Enter') authLogin()">
-                    <button onclick="authLogin()" class="btn-landing">Enter</button>
+                    <button id="login-btn" onclick="authLogin()" class="btn-landing">Enter</button>
                     <div id="login-err" class="err-msg" style="text-align: center;"></div>
                     <div class="link-forgot" onclick="toggleAuth('forgot')">Forgot Password?</div>
                 </div>
@@ -304,7 +330,7 @@
                     <input type="email" id="r-email" class="input-dark" placeholder="Email (Unique)">
                     <input type="text" id="r-user" class="input-dark" placeholder="Choose Username (Unique)">
                     <input type="password" id="r-pass" class="input-dark" placeholder="Password">
-                    <button onclick="authRegister()" class="btn-landing">Create Account</button>
+                    <button id="reg-btn" onclick="authRegister()" class="btn-landing">Create Account</button>
                     <div id="reg-err" class="err-msg" style="text-align: center;"></div>
                 </div>
 
@@ -450,7 +476,7 @@
 
                 <div id="view-stats" class="hidden">
                     <div class="card" style="margin-bottom:1.5rem;">
-                        <h2>Monthly Progress (<span id="monthly-year"></span>)</h2>
+                        <h2><span id="monthly-head">Monthly Progress</span></h2>
                         <div id="monthly-list" class="list-container" style="max-height:320px;"></div>
                     </div>
                     <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
@@ -786,6 +812,19 @@
             document.getElementById('form-forgot').classList.toggle('hidden', mode!=='forgot');
         }
 
+        function setBtnBusy(btnId, busy, busyLabel) {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            if (busy) {
+                btn.dataset.label = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = `<span class="btn-spinner"></span>${busyLabel || 'Please wait...'}`;
+            } else {
+                btn.disabled = false;
+                if (btn.dataset.label) btn.innerHTML = btn.dataset.label;
+            }
+        }
+
         function authLogin() {
             const u = document.getElementById('l-user').value.trim();
             const p = document.getElementById('l-pass').value.trim();
@@ -797,6 +836,7 @@
                 return;
             }
 
+            setBtnBusy('login-btn', true, 'Signing in...');
             api('/api/login', 'POST', { username: u, password: p })
                 .then(async user => {
                     await loadInitialData(user);
@@ -804,7 +844,8 @@
                     loadApp(user);
                 })
                 .catch(err => {
-                    errEl.innerText = err.message || "Incorrect Username or Password. Please try again.";
+                    setBtnBusy('login-btn', false);
+                    errEl.innerText = err.message || "Incorrect login or password. Please try again.";
                     errEl.style.display = 'block';
                 });
         }
@@ -823,6 +864,7 @@
                 return;
             }
             
+            setBtnBusy('reg-btn', true, 'Creating account...');
             api('/api/signup', 'POST', { firstName: first, lastName: last, username: u, password: p, email })
                 .then(async user => {
                     await loadInitialData(user);
@@ -830,6 +872,7 @@
                     loadApp(user);
                 })
                 .catch(err => {
+                    setBtnBusy('reg-btn', false);
                     errEl.innerText = err.message;
                     errEl.style.display = 'block';
                 });
@@ -1556,7 +1599,7 @@
             // Monthly progress (current year)
             const mNow = new Date();
             const curYear = String(mNow.getFullYear());
-            document.getElementById('monthly-year').innerText = curYear;
+            document.getElementById('monthly-head').innerText = `Monthly Progress (${curYear})`;
             const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
             const monthlyMap = {};
             logs.forEach(l => {
